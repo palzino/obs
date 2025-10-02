@@ -1,0 +1,66 @@
+services:
+  proxmox:
+    image: prompve/prometheus-pve-exporter:latest
+    restart: unless-stopped
+    ports:
+      - "9221:9221" 
+    environment:
+      PVE_USER: ${PVE_USER}
+      PVE_PASSWORD: ${PVE_PASSWORD}
+      PVE_VERIFY_SSL: "false"
+    command: 
+      - "--web.listen-address=0.0.0.0:9221"
+      - "--no-collector.config"
+  nginx:
+    image: nginx/nginx-prometheus-exporter
+    restart: unless-stopped
+    command:
+      - ${NGINX_URI}
+    ports:
+      - "9113:9113"
+  pgsql:
+    image: prometheuscommunity/postgres-exporter
+    restart: unless-stopped
+    environment:
+      - DATA_SOURCE_NAME=${PGSQL}
+    ports:
+      - "9187:9187"
+  adguard:
+    image: ebrianne/adguard-exporter
+    restart: unless-stopped
+    ports:
+      - "9617:9617"
+    environment:
+      - adguard_protocol=${ADG_PROTO}
+      - adguard_hostname=${ADG_PROTO}
+      - adguard_username=${ADG_USR}
+      - adguard_password=${ADG_PASS}
+      - interval=10s
+      - log_limit=10000
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - "--web.enable-lifecycle"
+    ports:
+      - 9090:9090
+    restart: unless-stopped
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prom_data:/prometheus
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - 3000:3000
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAF_USR}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAF_PASS}
+    volumes:
+      - ./grafana:/etc/grafana/provisioning/datasources
+      - grafana_data:/var/lib/grafana
+volumes:
+  prom_data:
+  grafana_data:
