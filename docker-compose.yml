@@ -1,4 +1,10 @@
 services:
+  loki:
+    image: grafana/loki:latest
+    ports:
+      - 3100:3100
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/loki-config.yaml
   proxmox:
     image: prompve/prometheus-pve-exporter:latest
     restart: unless-stopped
