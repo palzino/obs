@@ -399,12 +399,6 @@ loki.source.docker "containers" {
   host       = "unix:///var/run/docker.sock"
   targets    = []
   forward_to = [loki.process.containers.receiver]
-  relabel_rules = <<EOF
-    - source_labels: [__meta_docker_container_name]
-      target_label: container
-    - source_labels: [__meta_docker_container_log_stream]
-      target_label: stream
-  EOF
 }
 
 // Process container logs to extract trace IDs
