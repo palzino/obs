@@ -92,7 +92,7 @@ services:
       - "9617:9617"
     environment:
       - adguard_protocol=${ADG_PROTO}
-      - adguard_hostname=${ADG_PROTO}
+      - adguard_hostname=${ADG_HOST}
       - adguard_username=${ADG_USR}
       - adguard_password=${ADG_PASS}
       - interval=10s
