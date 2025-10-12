@@ -1,0 +1,444 @@
+// Grafana Alloy Configuration for OTEL Metrics, Traces, and Logs
+// with Full Distributed Tracing and Log Correlation
+
+// ========================================
+// OTEL Receivers
+// ========================================
+
+// OTLP gRPC Receiver (port 4318 for Alloy, since Tempo uses 4317)
+otelcol.receiver.otlp "default" {
+  grpc {
+    endpoint = "0.0.0.0:4318"
+  }
+
+  http {
+    endpoint = "0.0.0.0:4319"
+  }
+
+  output {
+    metrics = [otelcol.processor.batch.default.input]
+    traces  = [otelcol.processor.batch.default.input]
+    logs    = [otelcol.processor.batch.default.input]
+  }
+}
+
+// Syslog Receiver for OPNsense Firewall Logs
+otelcol.receiver.syslog "opnsense" {
+  protocol = "rfc5424"
+  
+  tcp {
+    listen_address = "0.0.0.0:5140"
+  }
+  
+  udp {
+    listen_address = "0.0.0.0:5140"
+  }
+
+  output {
+    logs = [otelcol.processor.attributes.opnsense.input]
+  }
+}
+
+// ========================================
+// OTEL Processors
+// ========================================
+
+// Add attributes to OPNsense logs
+otelcol.processor.attributes "opnsense" {
+  action {
+    key    = "source"
+    value  = "opnsense"
+    action = "insert"
+  }
+  
+  action {
+    key    = "log_type"
+    value  = "firewall"
+    action = "insert"
+  }
+
+  output {
+    logs = [otelcol.processor.batch.default.input]
+  }
+}
+
+// Batch processor for better performance
+otelcol.processor.batch "default" {
+  timeout          = "5s"
+  send_batch_size  = 1024
+  send_batch_max_size = 2048
+
+  output {
+    metrics = [otelcol.exporter.prometheus.default.input]
+    traces  = [otelcol.processor.tail_sampling.default.input]
+    logs    = [otelcol.processor.resource_detection.default.input]
+  }
+}
+
+// Tail sampling - keep all traces with errors, sample others
+otelcol.processor.tail_sampling "default" {
+  // Wait 10 seconds before making sampling decision
+  decision_wait = "10s"
+  
+  // Sample 100% of traces with errors
+  policy {
+    name = "errors"
+    type = "status_code"
+    status_code {
+      status_codes = ["ERROR"]
+    }
+  }
+  
+  // Sample 100% of slow traces (>1s)
+  policy {
+    name = "slow_traces"
+    type = "latency"
+    latency {
+      threshold_ms = 1000
+    }
+  }
+  
+  // Sample 10% of normal traces
+  policy {
+    name = "probabilistic"
+    type = "probabilistic"
+    probabilistic {
+      sampling_percentage = 10
+    }
+  }
+
+  output {
+    traces = [otelcol.exporter.otlp.tempo.input]
+  }
+}
+
+// Resource detection for better context
+otelcol.processor.resource_detection "default" {
+  detectors = ["env", "system", "docker"]
+  
+  output {
+    logs = [otelcol.exporter.loki.default.input]
+  }
+}
+
+// ========================================
+// OTEL Exporters
+// ========================================
+
+// Export metrics to Prometheus
+otelcol.exporter.prometheus "default" {
+  forward_to = [prometheus.remote_write.default.receiver]
+}
+
+// Export traces to Tempo
+otelcol.exporter.otlp "tempo" {
+  client {
+    endpoint = "tempo:4317"
+    tls {
+      insecure = true
+    }
+  }
+}
+
+// Export logs to Loki with trace correlation
+otelcol.exporter.loki "default" {
+  forward_to = [loki.write.default.receiver]
+}
+
+// ========================================
+// Prometheus Components
+// ========================================
+
+// Remote write to Prometheus
+prometheus.remote_write "default" {
+  endpoint {
+    url = "http://prometheus:9090/api/v1/write"
+    
+    queue_config {
+      capacity             = 10000
+      max_shards           = 10
+      max_samples_per_send = 5000
+    }
+  }
+}
+
+// ========================================
+// Loki Components - Log Collection with Trace Correlation
+// ========================================
+
+// Write logs to Loki
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
+
+// ========================================
+// Nginx Access Logs with Trace ID Extraction
+// ========================================
+
+// Parse Nginx access logs and extract trace IDs
+loki.source.file "nginx_access" {
+  targets = [
+    {
+      __path__  = "/var/log/nginx/access.log",
+      job       = "nginx-access",
+      log_type  = "access",
+    },
+    {
+      __path__  = "/var/log/nginx/access-json.log",
+      job       = "nginx-access-json",
+      log_type  = "access-json",
+    },
+  ]
+  
+  forward_to = [loki.process.nginx.receiver]
+}
+
+// Process Nginx logs to extract trace context
+loki.process "nginx" {
+  // Extract trace_id and span_id from JSON logs
+  stage.json {
+    expressions = {
+      timestamp   = "time",
+      status      = "status",
+      method      = "method",
+      path        = "path",
+      trace_id    = "trace_id",
+      span_id     = "span_id",
+      duration    = "request_time",
+      remote_addr = "remote_addr",
+      user_agent  = "user_agent",
+    }
+  }
+  
+  // Add trace_id as a label for correlation
+  stage.labels {
+    values = {
+      status    = "",
+      method    = "",
+      trace_id  = "",
+    }
+  }
+  
+  // Extract duration as a metric
+  stage.metrics {
+    metric.counter {
+      name        = "nginx_requests_total"
+      description = "Total nginx requests"
+      
+      match_all = true
+      action    = "inc"
+    }
+    
+    metric.histogram {
+      name        = "nginx_request_duration_seconds"
+      description = "Nginx request duration"
+      
+      source = "duration"
+      buckets = [0.01, 0.05, 0.1, 0.5, 1.0, 5.0, 10.0]
+    }
+  }
+
+  forward_to = [loki.write.default.receiver]
+}
+
+// Nginx error logs
+loki.source.file "nginx_error" {
+  targets = [
+    {
+      __path__  = "/var/log/nginx/error.log",
+      job       = "nginx-error",
+      log_type  = "error",
+    },
+  ]
+  
+  forward_to = [loki.write.default.receiver]
+}
+
+// ========================================
+// OPNsense Firewall Logs via Syslog
+// ========================================
+
+// Receive syslog from OPNsense
+loki.source.syslog "opnsense" {
+  listener {
+    address  = "0.0.0.0:5514"
+    protocol = "tcp"
+    
+    labels = {
+      job    = "opnsense",
+      source = "firewall",
+    }
+  }
+  
+  listener {
+    address  = "0.0.0.0:5514"
+    protocol = "udp"
+    
+    labels = {
+      job    = "opnsense",
+      source = "firewall",
+    }
+  }
+  
+  forward_to = [loki.process.opnsense.receiver]
+}
+
+// Process OPNsense logs to extract connection info
+loki.process "opnsense" {
+  // Parse firewall log format
+  stage.regex {
+    expression = "(?P<action>pass|block|reject).*?(?P<protocol>tcp|udp|icmp).*?(?P<src_ip>\\d+\\.\\d+\\.\\d+\\.\\d+):(?P<src_port>\\d+).*?(?P<dst_ip>\\d+\\.\\d+\\.\\d+\\.\\d+):(?P<dst_port>\\d+)"
+  }
+  
+  // Add extracted fields as labels
+  stage.labels {
+    values = {
+      action    = "",
+      protocol  = "",
+      src_ip    = "",
+      dst_ip    = "",
+      dst_port  = "",
+    }
+  }
+  
+  // Create metrics from firewall events
+  stage.metrics {
+    metric.counter {
+      name        = "opnsense_packets_total"
+      description = "Total packets processed by firewall"
+      
+      match_all = true
+      action    = "inc"
+    }
+  }
+
+  forward_to = [loki.write.default.receiver]
+}
+
+// ========================================
+// Prometheus Scraping (Optional - scrape existing exporters)
+// ========================================
+
+// Scrape AdGuard exporter
+prometheus.scrape "adguard" {
+  targets = [{
+    __address__ = "adguard:9617",
+  }]
+  forward_to = [prometheus.remote_write.default.receiver]
+  scrape_interval = "10s"
+}
+
+// Scrape Nginx exporter
+prometheus.scrape "nginx" {
+  targets = [{
+    __address__ = "nginx:9113",
+  }]
+  forward_to = [prometheus.remote_write.default.receiver]
+  scrape_interval = "10s"
+}
+
+// Scrape PostgreSQL exporter
+prometheus.scrape "pgsql" {
+  targets = [{
+    __address__ = "pgsql:9187",
+  }]
+  forward_to = [prometheus.remote_write.default.receiver]
+  scrape_interval = "10s"
+}
+
+// Scrape Proxmox exporter
+prometheus.scrape "proxmox" {
+  targets = [{
+    __address__ = "proxmox:9221",
+  }]
+  forward_to = [prometheus.remote_write.default.receiver]
+  scrape_interval = "15s"
+}
+
+// Scrape Prometheus itself
+prometheus.scrape "prometheus" {
+  targets = [{
+    __address__ = "prometheus:9090",
+  }]
+  forward_to = [prometheus.remote_write.default.receiver]
+  scrape_interval = "10s"
+}
+
+// Scrape Alloy's own metrics
+prometheus.scrape "alloy" {
+  targets = [{
+    __address__ = "localhost:12345",
+  }]
+  forward_to = [prometheus.remote_write.default.receiver]
+  scrape_interval = "10s"
+}
+
+// ========================================
+// Host Metrics Discovery
+// ========================================
+
+// Discover system metrics from the host
+prometheus.exporter.unix "host" {
+  // This will expose host-level metrics
+}
+
+prometheus.scrape "host_metrics" {
+  targets    = prometheus.exporter.unix.host.targets
+  forward_to = [prometheus.remote_write.default.receiver]
+  scrape_interval = "10s"
+}
+
+// ========================================
+// Docker Container Logs with Trace Context
+// ========================================
+
+// Collect logs from Docker containers
+loki.source.docker "containers" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = []
+  forward_to = [loki.process.containers.receiver]
+  relabel_rules = <<EOF
+    - source_labels: [__meta_docker_container_name]
+      target_label: container
+    - source_labels: [__meta_docker_container_log_stream]
+      target_label: stream
+  EOF
+}
+
+// Process container logs to extract trace IDs
+loki.process "containers" {
+  // Try to extract trace_id from JSON logs
+  stage.json {
+    expressions = {
+      trace_id    = "trace_id",
+      span_id     = "span_id",
+      level       = "level",
+      message     = "message",
+    }
+  }
+  
+  // Add trace_id as label if present
+  stage.labels {
+    values = {
+      trace_id = "",
+      level    = "",
+    }
+  }
+
+  forward_to = [loki.write.default.receiver]
+}
+
+// ========================================
+// System Logs
+// ========================================
+
+// Collect system logs
+loki.source.file "system_logs" {
+  targets = [
+    {__path__ = "/var/log/syslog", job = "syslog"},
+    {__path__ = "/var/log/kern.log", job = "kern"},
+  ]
+  forward_to = [loki.write.default.receiver]
+}

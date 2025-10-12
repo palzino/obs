@@ -1,4 +1,31 @@
 services:
+  alloy:
+    image: grafana/alloy:latest
+    container_name: alloy
+    hostname: monitoring.palvir.dev
+    command:
+      - "--storage.path=/var/lib/alloy/data"
+      - "--server.http.listen-addr=0.0.0.0:12345"
+      - "/etc/alloy/config.alloy"
+    user: "0"
+    ports: 
+      - 12345:12345
+      - 4318:4318  # OTLP gRPC receiver
+      - 4319:4319  # OTLP HTTP receiver
+      - 5140:5140  # OTLP Syslog receiver (TCP)
+      - 5140:5140/udp  # OTLP Syslog receiver (UDP)
+      - 5514:5514  # Loki Syslog receiver (TCP)
+      - 5514:5514/udp  # Loki Syslog receiver (UDP)
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy
+      - ./alloy/data:/var/lib/alloy/data
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /var/log:/var/log:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /run/udev/data:/run/udev/data:ro
+    restart: unless-stopped
   loki:
     image: grafana/loki:latest
     user: "0"
@@ -8,6 +35,7 @@ services:
     volumes:
       - ./loki/loki-config.yaml:/etc/loki/loki-config.yaml
       - ./loki/data:/loki
+    restart: unless-stopped
   tempo:
     image: grafana/tempo:latest
     container_name: tempo
@@ -19,6 +47,7 @@ services:
     ports:
       - "3200:3200" # tempo
       - "4317:4317" # otlp grpc
+    restart: unless-stopped
   proxmox:
     image: prompve/prometheus-pve-exporter:latest
     restart: unless-stopped

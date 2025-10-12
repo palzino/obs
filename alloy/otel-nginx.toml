@@ -1,0 +1,71 @@
+# OpenTelemetry Configuration for Nginx
+# Place this file at /etc/nginx/otel-nginx.toml
+
+# Exporter type: otlp, jaeger, zipkin
+exporter = "otlp"
+
+# Span processor: batch (recommended) or simple
+processor = "batch"
+
+# ========================================
+# OTLP Exporter Configuration
+# ========================================
+[exporters.otlp]
+# Alloy OTLP gRPC endpoint
+host = "alloy"  # Change to your Alloy server IP or hostname
+port = 4318
+
+# Use HTTP instead of gRPC (optional)
+# use_http = true
+# http_path = "/v1/traces"
+
+# ========================================
+# Batch Processor Configuration
+# ========================================
+[processors.batch]
+# Maximum queue size
+max_queue_size = 2048
+
+# Delay between batches (milliseconds)
+schedule_delay_millis = 5000
+
+# Maximum batch size
+max_export_batch_size = 512
+
+# ========================================
+# Service Configuration
+# ========================================
+[service]
+# Service name that appears in traces
+name = "nginx-proxy"
+
+# Optional: namespace for service
+# namespace = "production"
+
+# ========================================
+# Sampling Configuration
+# ========================================
+[sampler]
+# Sampler types:
+# - AlwaysOn: Sample all requests (use for testing)
+# - AlwaysOff: Sample no requests
+# - TraceIdRatioBased: Sample based on trace ID ratio
+name = "AlwaysOn"
+
+# For TraceIdRatioBased sampler, set ratio (0.0 to 1.0)
+# ratio = 0.1  # Sample 10% of requests
+
+# Parent-based sampler (respects parent span sampling decision)
+# name = "ParentBased_TraceIdRatioBased"
+# parent_name = "TraceIdRatioBased"
+# ratio = 0.1
+
+# ========================================
+# Optional: Custom Attributes
+# ========================================
+# Add custom attributes to all spans
+# [service.attributes]
+# environment = "production"
+# cluster = "us-east-1"
+# version = "1.0.0"
+
