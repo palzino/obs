@@ -4,6 +4,7 @@ services:
     container_name: alloy
     hostname: monitoring.palvir.dev
     command:
+      - "run"
       - "--storage.path=/var/lib/alloy/data"
       - "--server.http.listen-addr=0.0.0.0:12345"
       - "/etc/alloy/config.alloy"
