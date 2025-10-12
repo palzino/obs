@@ -22,45 +22,9 @@ otelcol.receiver.otlp "default" {
   }
 }
 
-// Syslog Receiver for OPNsense Firewall Logs
-otelcol.receiver.syslog "opnsense" {
-  protocol = "rfc5424"
-  
-  tcp {
-    listen_address = "0.0.0.0:5140"
-  }
-  
-  udp {
-    listen_address = "0.0.0.0:5140"
-  }
-
-  output {
-    logs = [otelcol.processor.attributes.opnsense.input]
-  }
-}
-
 // ========================================
 // OTEL Processors
 // ========================================
-
-// Add attributes to OPNsense logs
-otelcol.processor.attributes "opnsense" {
-  action {
-    key    = "source"
-    value  = "opnsense"
-    action = "insert"
-  }
-  
-  action {
-    key    = "log_type"
-    value  = "firewall"
-    action = "insert"
-  }
-
-  output {
-    logs = [otelcol.processor.batch.default.input]
-  }
-}
 
 // Batch processor for better performance
 otelcol.processor.batch "default" {
@@ -71,7 +35,7 @@ otelcol.processor.batch "default" {
   output {
     metrics = [otelcol.exporter.prometheus.default.input]
     traces  = [otelcol.processor.tail_sampling.default.input]
-    logs    = [otelcol.processor.resource_detection.default.input]
+    logs    = [otelcol.exporter.loki.default.input]
   }
 }
 
@@ -109,15 +73,6 @@ otelcol.processor.tail_sampling "default" {
 
   output {
     traces = [otelcol.exporter.otlp.tempo.input]
-  }
-}
-
-// Resource detection for better context
-otelcol.processor.resource_detection "default" {
-  detectors = ["env", "system", "docker"]
-  
-  output {
-    logs = [otelcol.exporter.loki.default.input]
   }
 }
 
