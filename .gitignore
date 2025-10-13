@@ -1,1 +1,5 @@
 .env
+loki/data
+alloy/data
+tempo/data
+prometheus/data
