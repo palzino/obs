@@ -29,6 +29,7 @@ services:
     restart: unless-stopped
   loki:
     image: grafana/loki:latest
+    container_name: loki
     user: "0"
     ports:
       - 3100:3100
