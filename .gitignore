@@ -3,3 +3,4 @@ loki/data
 alloy/data
 tempo/data
 prometheus/data
+nodejs-example/node_modules
