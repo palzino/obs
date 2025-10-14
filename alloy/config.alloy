@@ -330,6 +330,15 @@ prometheus.scrape "alloy" {
   scrape_interval = "10s"
 }
 
+// Scrape cAdvisor from external host
+prometheus.scrape "cadvisor" {
+  targets = [{
+    __address__ = "192.168.1.16:8050",
+  }]
+  forward_to = [prometheus.remote_write.default.receiver]
+  scrape_interval = "10s"
+}
+
 // ========================================
 // Host Metrics Discovery
 // ========================================
