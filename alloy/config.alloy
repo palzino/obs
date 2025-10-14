@@ -306,7 +306,8 @@ prometheus.scrape "pgsql" {
 // Scrape Proxmox exporter (multi-target pattern)
 prometheus.scrape "proxmox" {
   targets = [{
-    __address__ = "192.168.0.65",
+    __address__ = "192.168.0.243:9221",
+    __param_target = "192.168.0.65",
   }]
   
   scrape_interval = "15s"
@@ -316,30 +317,16 @@ prometheus.scrape "proxmox" {
     enabled = false
   }
   
-  // Relabel configs to implement multi-target pattern
-  // This sends: http://192.168.0.243:9221/pve?target=192.168.0.65
   forward_to = [prometheus.relabel.proxmox.receiver]
 }
 
 prometheus.relabel "proxmox" {
   forward_to = [prometheus.remote_write.default.receiver]
   
-  // Take __address__ (192.168.0.65) and put it in __param_target
-  rule {
-    source_labels = ["__address__"]
-    target_label  = "__param_target"
-  }
-  
-  // Take __param_target and put it in instance label
+  // Set instance label to the target
   rule {
     source_labels = ["__param_target"]
     target_label  = "instance"
-  }
-  
-  // Replace __address__ with the actual exporter address
-  rule {
-    target_label = "__address__"
-    replacement  = "192.168.0.243:9221"
   }
 }
 
