@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  nodejs-app:
+    build: .
+    container_name: nodejs-app
+    ports:
+      - "3001:3001"
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=192.168.0.243:4318
+      - OTEL_SERVICE_NAME=nodejs-app
+      - OTEL_SERVICE_VERSION=1.0.0
+      - NODE_ENV=production
+      - PORT=3001
+      - LOG_LEVEL=info
+    restart: unless-stopped
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
