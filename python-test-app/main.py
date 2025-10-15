@@ -1,0 +1,208 @@
+#!/usr/bin/env python3
+"""
+Python OpenTelemetry Test Application
+Uses opentelemetry-distro for auto-instrumentation with proper logging setup
+"""
+
+import os
+import time
+import random
+import logging
+from flask import Flask, jsonify, request
+from opentelemetry import trace
+from opentelemetry import metrics
+from opentelemetry._logs import set_logger_provider
+from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
+from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+from opentelemetry.sdk.resources import Resource
+
+# Configuration
+OTEL_ENDPOINT = os.getenv('OTEL_EXPORTER_OTLP_ENDPOINT', '192.168.0.243:4318')
+SERVICE_NAME = os.getenv('OTEL_SERVICE_NAME', 'python-app')
+SERVICE_VERSION = os.getenv('OTEL_SERVICE_VERSION', '1.0.0')
+
+print(f"🔧 Configuring OpenTelemetry for service: {SERVICE_NAME}")
+print(f"📡 OTLP Endpoint: {OTEL_ENDPOINT}")
+
+# Set up Flask app
+app = Flask(__name__)
+
+# Configure OpenTelemetry logging manually
+logger_provider = LoggerProvider(
+    resource=Resource.create(
+        {
+            "service.name": SERVICE_NAME,
+            "service.version": SERVICE_VERSION,
+            "service.instance.id": "python-app-1",
+        }
+    ),
+)
+set_logger_provider(logger_provider)
+
+# Set up OTLP log exporter
+exporter = OTLPLogExporter(insecure=True, endpoint=OTEL_ENDPOINT)
+logger_provider.add_log_record_processor(BatchLogRecordProcessor(exporter))
+handler = LoggingHandler(level=logging.NOTSET, logger_provider=logger_provider)
+
+# Configure Python logging to use OpenTelemetry
+logging.getLogger().setLevel(logging.NOTSET)
+logging.getLogger().addHandler(handler)
+logger = logging.getLogger("python-app")
+
+# Get tracer and meter (will be auto-configured by distro)
+tracer = trace.get_tracer(__name__)
+meter = metrics.get_meter(__name__)
+
+# Create custom metrics
+request_counter = meter.create_counter(
+    name="python_requests_total",
+    description="Total number of requests",
+)
+request_duration = meter.create_histogram(
+    name="python_request_duration_seconds",
+    description="Request duration in seconds",
+)
+
+print("✅ OpenTelemetry initialized successfully")
+
+@app.route('/health')
+def health():
+    """Health check endpoint"""
+    logger.info("Health check requested")
+    return jsonify({
+        "status": "healthy",
+        "service": SERVICE_NAME,
+        "timestamp": time.time()
+    })
+
+@app.route('/api/hello')
+def hello():
+    """Hello endpoint with custom span"""
+    name = request.args.get('name', 'World')
+    
+    logger.info(f"Hello endpoint called for user: {name}")
+    
+    with tracer.start_as_current_span("custom-operation") as span:
+        span.set_attribute("user.name", name)
+        
+        # Simulate some work
+        time.sleep(0.1)
+        
+        # Add custom metrics
+        request_counter.add(1, {"endpoint": "/api/hello", "status": "success"})
+        
+        logger.info(f"Hello operation completed successfully for user: {name}")
+        
+        return jsonify({
+            "message": f"Hello, {name}!",
+            "trace_id": format(span.get_span_context().trace_id, '032x'),
+            "timestamp": time.time()
+        })
+
+@app.route('/api/error')
+def error_endpoint():
+    """Endpoint that generates an error"""
+    logger.error("Intentional error triggered")
+    error = Exception("This is a test error from Python")
+    raise error
+
+@app.route('/api/slow')
+def slow_endpoint():
+    """Slow endpoint for testing tail sampling"""
+    duration = int(request.args.get('duration', 2000)) / 1000.0
+    
+    logger.info(f"Slow endpoint called with duration: {duration}s")
+    
+    with tracer.start_as_current_span("slow-operation") as span:
+        span.set_attribute("duration", duration)
+        time.sleep(duration)
+        
+        logger.info(f"Slow operation completed in {duration}s")
+        
+        return jsonify({
+            "message": "Completed slow operation",
+            "duration": duration,
+            "timestamp": time.time()
+        })
+
+@app.route('/api/data', methods=['POST'])
+def data_endpoint():
+    """Data submission endpoint with metrics"""
+    data = request.get_json() or {}
+    value = data.get('value', 0)
+    
+    logger.info(f"Data received with value: {value}")
+    
+    # Create custom metric
+    data_counter = meter.create_counter(
+        name="python_data_submissions_total",
+        description="Number of data submissions",
+    )
+    data_counter.add(1, {"endpoint": "/api/data", "status": "success"})
+    
+    return jsonify({
+        "status": "received",
+        "value": value,
+        "timestamp": time.time()
+    })
+
+@app.route('/api/random')
+def random_endpoint():
+    """Generate random data with metrics"""
+    with tracer.start_as_current_span("random-operation") as span:
+        # Generate random data
+        random_value = random.randint(1, 100)
+        random_delay = random.uniform(0.1, 0.5)
+        
+        span.set_attribute("random.value", random_value)
+        span.set_attribute("random.delay", random_delay)
+        
+        logger.info(f"Random operation started - value: {random_value}, delay: {random_delay}")
+        
+        time.sleep(random_delay)
+        
+        # Record duration metric
+        request_duration.record(random_delay, {"endpoint": "/api/random"})
+        
+        logger.info(f"Random operation completed - value: {random_value}, delay: {random_delay}")
+        
+        return jsonify({
+            "random_value": random_value,
+            "delay": random_delay,
+            "timestamp": time.time()
+        })
+
+@app.errorhandler(Exception)
+def handle_error(error):
+    """Global error handler"""
+    logger.error(f"Unhandled error: {str(error)}", extra={"error": str(error)})
+    
+    # Record error in current span if available
+    current_span = trace.get_current_span()
+    if current_span:
+        current_span.record_exception(error)
+        current_span.set_status(trace.Status(trace.StatusCode.ERROR, str(error)))
+    
+    return jsonify({
+        "error": "Internal Server Error",
+        "message": str(error)
+    }), 500
+
+if __name__ == '__main__':
+    port = int(os.getenv('PORT', 3002))
+    print(f"🚀 Starting Python app on port {port}")
+    print(f"📊 Telemetry data is being sent to Alloy at {OTEL_ENDPOINT}")
+    print("\nAvailable endpoints:")
+    print(f"  GET  http://localhost:{port}/health")
+    print(f"  GET  http://localhost:{port}/api/hello?name=X")
+    print(f"  GET  http://localhost:{port}/api/error")
+    print(f"  GET  http://localhost:{port}/api/slow?duration=X")
+    print(f"  POST http://localhost:{port}/api/data")
+    print(f"  GET  http://localhost:{port}/api/random")
+    
+    try:
+        app.run(host='0.0.0.0', port=port, debug=False)
+    finally:
+        # Properly shutdown the logger provider
+        logger_provider.shutdown()

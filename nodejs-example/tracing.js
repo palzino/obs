@@ -5,16 +5,20 @@ const { NodeSDK } = require('@opentelemetry/sdk-node');
 const { getNodeAutoInstrumentations } = require('@opentelemetry/auto-instrumentations-node');
 const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-grpc');
 const { OTLPMetricExporter } = require('@opentelemetry/exporter-metrics-otlp-grpc');
-const { OTLPLogExporter } = require('@opentelemetry/exporter-logs-otlp-grpc');
+const { OTLPLogExporter } = require('@opentelemetry/exporter-logs-otlp-http');
 const { Resource } = require('@opentelemetry/resources');
 const { SemanticResourceAttributes } = require('@opentelemetry/semantic-conventions');
 const { PeriodicExportingMetricReader } = require('@opentelemetry/sdk-metrics');
-const { BatchLogRecordProcessor } = require('@opentelemetry/sdk-logs');
+const { LoggerProvider, BatchLogRecordProcessor } = require('@opentelemetry/sdk-logs');
+const logsAPI = require('@opentelemetry/api-logs');
 
 // Configure the OTLP exporter endpoint (Alloy gRPC endpoint)
-const ALLOY_ENDPOINT = process.env.OTEL_EXPORTER_OTLP_ENDPOINT || '192.168.0.243:4318';
+const ALLOY_ENDPOINT = process.env.OTEL_EXPORTER_OTLP_ENDPOINT || '192.168.0.243:4319';
 const SERVICE_NAME = process.env.OTEL_SERVICE_NAME || 'nodejs-app';
 const SERVICE_VERSION = process.env.OTEL_SERVICE_VERSION || '1.0.0';
+
+// Set the log protocol environment variable (crucial for logs to work)
+process.env.OTEL_EXPORTER_OTLP_LOG_PROTOCOL = 'http';
 
 console.log(`🔧 Configuring OpenTelemetry for service: ${SERVICE_NAME}`);
 console.log(`📡 OTLP Endpoint: ${ALLOY_ENDPOINT}`);
@@ -36,7 +40,7 @@ const metricExporter = new OTLPMetricExporter({
 });
 
 const logExporter = new OTLPLogExporter({
-  url: `http://${ALLOY_ENDPOINT}`,
+  url: `http://${ALLOY_ENDPOINT}/v1/logs`,
 });
 
 // Initialize the SDK
@@ -68,6 +72,18 @@ const sdk = new NodeSDK({
 try {
   sdk.start();
   console.log('✅ OpenTelemetry tracing initialized successfully');
+  
+  // Initialize logs SDK (following Jessitron's approach)
+  const loggerProvider = new LoggerProvider({
+    resource: resource,
+  });
+  
+  loggerProvider.addLogRecordProcessor(
+    new BatchLogRecordProcessor(logExporter)
+  );
+  
+  logsAPI.logs.setGlobalLoggerProvider(loggerProvider);
+  console.log('✅ OpenTelemetry logs initialized successfully');
 } catch (error) {
   console.error('❌ Error initializing OpenTelemetry:', error);
 }
