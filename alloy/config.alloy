@@ -33,9 +33,40 @@ otelcol.processor.batch "default" {
   send_batch_max_size = 2048
 
   output {
-    metrics = [otelcol.exporter.prometheus.default.input]
+    metrics = [otelcol.processor.attributes.metrics.input]
     traces  = [otelcol.processor.tail_sampling.default.input]
     logs    = [otelcol.exporter.loki.default.input]
+  }
+}
+
+// Attributes processor to preserve service names and add labels
+otelcol.processor.attributes "metrics" {
+  actions {
+    // Preserve service.name as service_name label
+    key = "service.name"
+    action = "insert"
+    from_attribute = "service.name"
+    value = "service_name"
+  }
+  
+  actions {
+    // Preserve service.version as service_version label  
+    key = "service.version"
+    action = "insert"
+    from_attribute = "service.version"
+    value = "service_version"
+  }
+  
+  actions {
+    // Preserve service.instance.id as instance label
+    key = "service.instance.id" 
+    action = "insert"
+    from_attribute = "service.instance.id"
+    value = "instance"
+  }
+
+  output {
+    metrics = [otelcol.exporter.prometheus.default.input]
   }
 }
 
