@@ -31,6 +31,22 @@ logger = logging.getLogger("python-app")
 tracer = trace.get_tracer(__name__)
 meter = metrics.get_meter(__name__)
 
+# Explicitly set resource attributes to ensure they're sent
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.metrics import MeterProvider
+
+# Create resource with service information
+resource = Resource.create({
+    "service.name": SERVICE_NAME,
+    "service.version": SERVICE_VERSION,
+    "service.instance.id": "python-app-1",
+})
+
+# Set the resource on the tracer and meter providers
+trace.set_tracer_provider(TracerProvider(resource=resource))
+metrics.set_meter_provider(MeterProvider(resource=resource))
+
 # Create some custom metrics to ensure metrics are being sent
 request_counter = meter.create_counter(
     name="python_app_requests_total",
