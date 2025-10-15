@@ -106,8 +106,9 @@ otelcol.processor.tail_sampling "default" {
 // OTEL Exporters
 // ========================================
 
-// Export metrics to Prometheus
+// Export metrics to Prometheus with resource attribute conversion
 otelcol.exporter.prometheus "default" {
+  resource_to_telemetry_conversion = true
   forward_to = [prometheus.remote_write.default.receiver]
 }
 
