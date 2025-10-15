@@ -33,31 +33,23 @@ otelcol.processor.batch "default" {
   send_batch_max_size = 2048
 
   output {
-    metrics = [otelcol.processor.attributes.metrics.input]
+    metrics = [otelcol.processor.transform.add_service_name.input]
     traces  = [otelcol.processor.tail_sampling.default.input]
     logs    = [otelcol.exporter.loki.default.input]
   }
 }
 
-// Attributes processor to promote resource attributes to metric labels
-otelcol.processor.attributes "metrics" {
-  // Promote resource attributes to metric labels
-  actions {
-    key = "service_name"
-    action = "insert"
-    from_attribute = "service.name"
-  }
-  
-  actions {
-    key = "service_version"
-    action = "insert" 
-    from_attribute = "service.version"
-  }
-  
-  actions {
-    key = "service_instance_id"
-    action = "insert"
-    from_attribute = "service.instance.id"
+// Transform processor to map resource attributes to metric labels
+otelcol.processor.transform "add_service_name" {
+  error_mode = "ignore"
+
+  metric_statements {
+    context = "datapoint"
+    statements = [
+      "set(attributes[\"service_name\"], resource.attributes[\"service.name\"])",
+      "set(attributes[\"service_version\"], resource.attributes[\"service.version\"])",
+      "set(attributes[\"service_instance_id\"], resource.attributes[\"service.instance.id\"])",
+    ]
   }
 
   output {

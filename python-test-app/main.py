@@ -31,14 +31,17 @@ logger = logging.getLogger("python-app")
 tracer = trace.get_tracer(__name__)
 meter = metrics.get_meter(__name__)
 
-# Create custom metrics
+# Create some custom metrics to ensure metrics are being sent
 request_counter = meter.create_counter(
-    name="python_requests_total",
+    name="python_app_requests_total",
     description="Total number of requests",
+    unit="1"
 )
+
 request_duration = meter.create_histogram(
-    name="python_request_duration_seconds",
+    name="python_app_request_duration_seconds",
     description="Request duration in seconds",
+    unit="s"
 )
 
 print("✅ OpenTelemetry initialized successfully")
@@ -46,12 +49,22 @@ print("✅ OpenTelemetry initialized successfully")
 @app.route('/health')
 def health():
     """Health check endpoint"""
+    # Record metrics
+    request_counter.add(1, {"endpoint": "health"})
+    
+    start_time = time.time()
     logger.info("Health check requested")
-    return jsonify({
+    
+    result = jsonify({
         "status": "healthy",
         "service": SERVICE_NAME,
-        "timestamp": time.time()
+        "timestamp": start_time
     })
+    
+    # Record duration
+    request_duration.record(time.time() - start_time, {"endpoint": "health"})
+    
+    return result
 
 @app.route('/api/hello')
 def hello():
