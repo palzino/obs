@@ -11,11 +11,6 @@ import logging
 from flask import Flask, jsonify, request
 from opentelemetry import trace
 from opentelemetry import metrics
-from opentelemetry._logs import set_logger_provider
-from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
-from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
-from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
-from opentelemetry.sdk.resources import Resource
 
 # Configuration
 OTEL_ENDPOINT = os.getenv('OTEL_EXPORTER_OTLP_ENDPOINT', '192.168.0.243:4318')
@@ -28,26 +23,8 @@ print(f"📡 OTLP Endpoint: {OTEL_ENDPOINT}")
 # Set up Flask app
 app = Flask(__name__)
 
-# Configure OpenTelemetry logging manually
-logger_provider = LoggerProvider(
-    resource=Resource.create(
-        {
-            "service.name": SERVICE_NAME,
-            "service.version": SERVICE_VERSION,
-            "service.instance.id": "python-app-1",
-        }
-    ),
-)
-set_logger_provider(logger_provider)
-
-# Set up OTLP log exporter
-exporter = OTLPLogExporter(insecure=True, endpoint=OTEL_ENDPOINT)
-logger_provider.add_log_record_processor(BatchLogRecordProcessor(exporter))
-handler = LoggingHandler(level=logging.NOTSET, logger_provider=logger_provider)
-
-# Configure Python logging to use OpenTelemetry
-logging.getLogger().setLevel(logging.NOTSET)
-logging.getLogger().addHandler(handler)
+# Configure logging (let distro handle OpenTelemetry integration)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("python-app")
 
 # Get tracer and meter (will be auto-configured by distro)
@@ -201,8 +178,4 @@ if __name__ == '__main__':
     print(f"  POST http://localhost:{port}/api/data")
     print(f"  GET  http://localhost:{port}/api/random")
     
-    try:
-        app.run(host='0.0.0.0', port=port, debug=False)
-    finally:
-        # Properly shutdown the logger provider
-        logger_provider.shutdown()
+    app.run(host='0.0.0.0', port=port, debug=False)
