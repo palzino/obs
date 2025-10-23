@@ -304,6 +304,15 @@ prometheus.scrape "adguard" {
   scrape_interval = "10s"
 }
 
+// Scrape ZinoHub exporter
+prometheus.scrape "zinohub-metrics" {
+  targets = [{
+    __address__ = "192.168.0.33:2112",
+  }]
+  forward_to = [prometheus.remote_write.default.receiver]
+  scrape_interval = "10s"
+}
+
 // Scrape Nginx exporter
 prometheus.scrape "nginx" {
   targets = [{
