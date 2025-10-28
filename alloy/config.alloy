@@ -131,6 +131,12 @@ otelcol.exporter.otlphttp "newrelic" {
     headers = {
       "api-key" = env("NEW_RELIC_LICENSE_KEY"),
     }
+    compression = "gzip"
+    timeout = "30s"
+  }
+  
+  retry_on_failure {
+    enabled = true
   }
 }
 
