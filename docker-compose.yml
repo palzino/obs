@@ -3,6 +3,8 @@ services:
     image: grafana/alloy:latest
     container_name: alloy
     hostname: monitoring.palvir.dev
+    environment:
+      - NEW_RELIC_LICENSE_KEY=${NEW_RELIC_LICENSE_KEY}
     command:
       - "run"
       - "--storage.path=/var/lib/alloy/data"
