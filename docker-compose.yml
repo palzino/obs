@@ -102,7 +102,7 @@ services:
       - log_limit=10000
     networks:
       - monitoring
-    cadvisor:
+  cadvisor:
     container_name: cadvisor
     image: gcr.io/cadvisor/cadvisor
     restart: unless-stopped
