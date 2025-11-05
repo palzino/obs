@@ -424,7 +424,7 @@ prometheus.scrape "node_exporter" {
     instance = "zinohub",
   }]
   forward_to = [prometheus.remote_write.default.receiver]
-  scrape_interval = "5s"
+  scrape_interval = "15s"
 }
 
 // ========================================
