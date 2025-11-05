@@ -417,12 +417,18 @@ prometheus.scrape "host_metrics" {
   scrape_interval = "10s"
 }
 
-// Scrape external Node Exporter (ZinoHub host)
+// Scrape external Node Exporters
 prometheus.scrape "node_exporter" {
-  targets = [{
-    __address__ = "192.168.0.33:9100",
-    instance = "zinohub",
-  }]
+  targets = [
+    {
+      __address__ = "192.168.0.33:9100",
+      instance = "zinohub",
+    },
+    {
+      __address__ = "192.168.1.16:9100",
+      instance = "prod-docker-server",
+    },
+  ]
   forward_to = [prometheus.remote_write.default.receiver]
   scrape_interval = "15s"
 }
