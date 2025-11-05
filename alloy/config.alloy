@@ -49,9 +49,9 @@ otelcol.processor.transform "add_service_name" {
   metric_statements {
     context = "datapoint"
     statements = [
-      "set(attributes[\"service_name\"], resource.attributes[\"service.name\"])",
-      "set(attributes[\"service_version\"], resource.attributes[\"service.version\"])",
-      "set(attributes[\"service_instance_id\"], resource.attributes[\"service.instance.id\"])",
+      "set(datapoint.attributes[\"service_name\"], resource.attributes[\"service.name\"])",
+      "set(datapoint.attributes[\"service_version\"], resource.attributes[\"service.version\"])",
+      "set(datapoint.attributes[\"service_instance_id\"], resource.attributes[\"service.instance.id\"])",
     ]
   }
 
