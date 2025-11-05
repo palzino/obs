@@ -20,7 +20,7 @@ scrape_configs:
   - job_name: 'cadvisor'
     scrape_interval: 5s
     static_configs:
-      - targets: ['192.168.1.16:8050','cadvisor:8080']
+      - targets: ['192.168.1.16:8050','cadvisor:8080','192.168.0.145:8050']
 # Optional: Add recording rules for aggregations
 # rule_files:
 #   - "rules/*.yml"
