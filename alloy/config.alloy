@@ -153,6 +153,7 @@ otelcol.exporter.loki "default" {
 prometheus.remote_write "default" {
   endpoint {
     url = "http://prometheus:9090/api/v1/write"
+    send_exemplars = false
     
     queue_config {
       capacity             = 10000
