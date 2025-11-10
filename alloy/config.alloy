@@ -433,6 +433,14 @@ prometheus.scrape "node_exporter" {
       __address__ = "192.168.0.145:9100",
       instance = "database-vm",
     },
+    {
+      __address__ = "192.168.0.1:9100",
+      instance = "opnsense",
+    },
+    {
+      __address__ = "192.168.2.10:9100",
+      instance = "qbit",
+    },
   ]
   forward_to = [prometheus.remote_write.default.receiver]
   scrape_interval = "15s"
