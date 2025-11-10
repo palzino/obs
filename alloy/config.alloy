@@ -441,6 +441,22 @@ prometheus.scrape "node_exporter" {
       __address__ = "192.168.2.10:9100",
       instance = "qbit",
     },
+    {
+      __address__ = "192.168.1.20:9100",
+      instance = "minecraft",
+    },
+    {
+      __address__ = "192.168.0.65:9100",
+      instance = "proxmox",
+    },
+    {
+      __address__ = "192.168.0.38:9100",
+      instance = "wg",
+    },
+    {
+      __address__ = "192.168.1.246:9100",
+      instance = "nginx",
+    },
   ]
   forward_to = [prometheus.remote_write.default.receiver]
   scrape_interval = "15s"
