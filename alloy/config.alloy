@@ -446,6 +446,18 @@ prometheus.scrape "node_exporter" {
   scrape_interval = "15s"
 }
 
+// Scrape qbit Exporter
+prometheus.scrape "qbittorrent" {
+  targets = [
+    {
+      __address__ = "qbittorrent-exporter:8090",
+      instance = "qbit",
+    },
+  ]
+  forward_to = [prometheus.remote_write.default.receiver]
+  scrape_interval = "15s"
+}
+
 // ========================================
 // Docker Container Logs with Trace Context
 // ========================================

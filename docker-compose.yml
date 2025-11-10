@@ -88,6 +88,16 @@ services:
       - "9187:9187"
     networks:
       - monitoring
+  qbittorrent-exporter:
+    image: ghcr.io/martabal/qbittorrent-exporter:latest
+    container_name: qbittorrent-exporter
+    environment:
+      - QBITTORRENT_BASE_URL=http://192.168.2.10:8080
+      - QBITTORRENT_PASSWORD=${QBIT_PASS}
+      - QBITTORRENT_USERNAME=${QBIT_USR}
+    ports:
+      - 8090:8090
+    restart: unless-stopped
   adguard:
     image: ebrianne/adguard-exporter
     restart: unless-stopped
