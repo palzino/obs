@@ -98,6 +98,8 @@ services:
     ports:
       - 8090:8090
     restart: unless-stopped
+    networks:
+      - monitoring
   adguard:
     image: ebrianne/adguard-exporter
     restart: unless-stopped
