@@ -29,6 +29,11 @@ services:
     networks:
       - monitoring
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
   loki:
     image: grafana/loki:latest
     container_name: loki
@@ -138,6 +143,7 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - "--web.enable-lifecycle"
       - "--web.enable-remote-write-receiver"
+      - "--storage.tsdb.retention.time=30d"
     ports:
       - 9090:9090
     restart: unless-stopped

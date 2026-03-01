@@ -457,6 +457,10 @@ prometheus.scrape "node_exporter" {
       __address__ = "192.168.1.246:9100",
       instance = "nginx",
     },
+    {
+      __address__ = "192.168.1.245:9100",
+      instance = "ark-server",
+    },
   ]
   forward_to = [prometheus.remote_write.default.receiver]
   scrape_interval = "15s"
