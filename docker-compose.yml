@@ -1,6 +1,6 @@
 services:
   alloy:
-    image: grafana/alloy:latest
+    image: grafana/alloy${ALLOY_VERSION}
     container_name: alloy
     hostname: monitoring.palvir.dev
     environment:
@@ -35,7 +35,7 @@ services:
         max-size: "50m"
         max-file: "3"
   loki:
-    image: grafana/loki:latest
+    image: grafana/loki${LOKI_VERSION}
     container_name: loki
     user: "0"
     ports:
@@ -48,7 +48,7 @@ services:
       - monitoring
     restart: unless-stopped
   tempo:
-    image: grafana/tempo:latest
+    image: grafana/tempo${TEMPO_VERSION}
     container_name: tempo
     user: "0"
     command: [ "-config.file=/etc/tempo.yaml" ]
@@ -62,8 +62,7 @@ services:
       - monitoring
     restart: unless-stopped
   proxmox:
-    image: prompve/prometheus-pve-exporter:latest
-    restart: unless-stopped
+    image: prompve/prometheus-pve-exporter${PVE_EXPORTER_VERSION}
     ports:
       - "9221:9221" 
     environment:
@@ -76,7 +75,7 @@ services:
     networks:
       - monitoring
   nginx:
-    image: nginx/nginx-prometheus-exporter
+    image: nginx/nginx-prometheus-exporter${NGINX_EXPORTER_VERSION}
     restart: unless-stopped
     command:
       - ${NGINX_URI}
@@ -85,7 +84,7 @@ services:
     networks:
       - monitoring
   pgsql:
-    image: prometheuscommunity/postgres-exporter
+    image: prometheuscommunity/postgres-exporter${POSTGRES_EXPORTER_VERSION}
     restart: unless-stopped
     environment:
       - DATA_SOURCE_NAME=${PGSQL}
@@ -94,7 +93,7 @@ services:
     networks:
       - monitoring
   qbittorrent-exporter:
-    image: ghcr.io/martabal/qbittorrent-exporter:latest
+    image: ghcr.io/martabal/qbittorrent-exporter${QBITTORRENT_EXPORTER_VERSION}
     container_name: qbittorrent-exporter
     environment:
       - QBITTORRENT_BASE_URL=http://192.168.2.10:8080
@@ -106,7 +105,7 @@ services:
     networks:
       - monitoring
   adguard:
-    image: ebrianne/adguard-exporter
+    image: ebrianne/adguard-exporter${ADGUARD_EXPORTER_VERSION}
     restart: unless-stopped
     ports:
       - "9617:9617"
@@ -121,7 +120,7 @@ services:
       - monitoring
   cadvisor:
     container_name: cadvisor
-    image: gcr.io/cadvisor/cadvisor
+    image: gcr.io/cadvisor/cadvisor${CADVISOR_VERSION}
     restart: unless-stopped
     privileged: true
     ports:
@@ -137,7 +136,7 @@ services:
     networks:
       - monitoring
   prometheus:
-    image: prom/prometheus
+    image: prom/prometheus${PROMETHEUS_VERSION}
     container_name: prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -153,7 +152,7 @@ services:
     networks:
       - monitoring
   grafana:
-    image: grafana/grafana
+    image: grafana/grafana${GRAFANA_VERSION}
     container_name: grafana
     ports:
       - 3000:3000
