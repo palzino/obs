@@ -1,8 +1,9 @@
-// Grafana Alloy configuration for the active observability stack.
-// This file keeps the runtime pipeline focused on:
+// Grafana Alloy runtime for the active observability stack:
 // - OTLP metrics, traces, and logs from applications
 // - Prometheus scraping for infrastructure exporters
 // - Docker and local system logs to Loki
+
+// Application telemetry
 
 // OTLP receivers
 otelcol.receiver.otlp "default" {
@@ -127,7 +128,7 @@ otelcol.exporter.otlphttp "loki" {
   }
 }
 
-// Prometheus components
+// Scraped infrastructure metrics are remote-written to Prometheus.
 prometheus.remote_write "default" {
   endpoint {
     url = "http://prometheus:9090/api/v1/write"
@@ -141,26 +142,19 @@ prometheus.remote_write "default" {
   }
 }
 
-// Loki components
+// Non-OTLP logs are pushed to Loki.
 loki.write "default" {
   endpoint {
     url = "http://loki:3100/loki/api/v1/push"
   }
 }
 
-// Prometheus scraping
+// Infrastructure metrics
+// Application metrics should arrive via OTLP rather than a legacy /metrics scrape.
 
 prometheus.scrape "adguard" {
   targets = [{
     __address__ = "adguard:9617",
-  }]
-  forward_to = [prometheus.remote_write.default.receiver]
-  scrape_interval = "10s"
-}
-
-prometheus.scrape "zinohub_metrics" {
-  targets = [{
-    __address__ = "192.168.0.33:2112",
   }]
   forward_to = [prometheus.remote_write.default.receiver]
   scrape_interval = "10s"
@@ -206,14 +200,6 @@ prometheus.relabel "proxmox" {
     source_labels = ["__param_target"]
     target_label  = "instance"
   }
-}
-
-prometheus.scrape "prometheus" {
-  targets = [{
-    __address__ = "prometheus:9090",
-  }]
-  forward_to = [prometheus.remote_write.default.receiver]
-  scrape_interval = "10s"
 }
 
 prometheus.scrape "alloy" {
@@ -290,6 +276,8 @@ prometheus.scrape "qbittorrent" {
   forward_to = [prometheus.remote_write.default.receiver]
   scrape_interval = "15s"
 }
+
+// Host and container logs
 
 // Docker container logs
 loki.source.docker "containers" {

@@ -24,6 +24,7 @@ Optional example material for broader setups still exists in this directory, but
 
 - Alloy scrapes Prometheus exporters and remote-writes those metrics to Prometheus
 - Alloy tails Docker logs and local system logs and forwards them to Loki
+- Prometheus self-scraping stays in `prometheus/prometheus.yml`, not in Alloy
 
 ## Exporters and Log Sources
 
@@ -33,7 +34,6 @@ Optional example material for broader setups still exists in this directory, but
 - Nginx Prometheus exporter
 - PostgreSQL exporter
 - Proxmox exporter
-- Prometheus self-scrape
 - Alloy self-scrape
 - Host unix exporter
 - External node exporters
@@ -61,6 +61,7 @@ Optional example material for broader setups still exists in this directory, but
 
 - The runtime config does **not** currently ingest OPNsense syslog.
 - The runtime config does **not** currently parse nginx access or error log files.
+- Application metrics are expected to arrive over OTLP rather than a legacy app `/metrics` scrape.
 - `alloy/OPNSENSE_SETUP.md`, `alloy/DISTRIBUTED_TRACING.md`, `alloy/nginx-otel-example.conf`, and `alloy/otel-nginx.toml` are reference material only unless you wire those sources back in.
 
 ## Validation
