@@ -1,13 +1,13 @@
 # obs
-A ready to deploy setup for prometheus and grafana metrics monitoring for Adguard, Nginx, PGSQL and Proxmox.
+A ready-to-run observability stack built around Alloy, Prometheus, Loki, Tempo, and Grafana.
 
 ## Features
-- **Grafana Alloy**: OpenTelemetry collector for metrics, traces, and logs
+- **Grafana Alloy**: OTLP collector plus Prometheus scraping
 - **Prometheus**: Metrics storage and querying
 - **Loki**: Log aggregation
 - **Tempo**: Distributed tracing
-- **Grafana**: Unified visualization dashboard
-- **Exporters**: AdGuard, Nginx, PostgreSQL, Proxmox
+- **Grafana**: Unified visualization
+- **Exporters**: AdGuard, Nginx, PostgreSQL, Proxmox, node exporters, qBittorrent
 
 ## Quick Start
 ```bash
@@ -24,20 +24,19 @@ open http://localhost:9090
 open http://localhost:12345
 ```
 
-## Distributed Tracing & Log Correlation
-Track requests from firewall → proxy → application → backend with full observability:
+## Runtime Scope
+The active runtime configuration currently covers:
 
-- **📊 OTLP Receivers**: gRPC (4318), HTTP (4319)
-- **🔥 OPNsense Integration**: Firewall logs via syslog (5514)
-- **🌐 Nginx Tracing**: Access logs with trace IDs
-- **🐳 Container Logs**: Automatic trace correlation
-- **📈 Metrics Extraction**: Derive metrics from logs
+- **OTLP receivers** for application metrics, traces, and logs
+- **Prometheus scraping** for infrastructure exporters
+- **Docker and local system logs** into Loki
+- **Native OTLP** metrics into Prometheus and logs into Loki
 
 ### Quick Links
-- **[Alloy Configuration Guide](alloy/README.md)** - Complete setup overview
-- **[Distributed Tracing Setup](alloy/DISTRIBUTED_TRACING.md)** - End-to-end request tracking
-- **[OPNsense Setup](alloy/OPNSENSE_SETUP.md)** - Firewall log integration
-- **[Nginx Example Config](alloy/nginx-otel-example.conf)** - Nginx with OpenTelemetry
+- **[Alloy Configuration Guide](alloy/README.md)** - Active runtime configuration
+- **[Distributed Tracing Setup](alloy/DISTRIBUTED_TRACING.md)** - Reference notes for broader tracing setups
+- **[OPNsense Setup](alloy/OPNSENSE_SETUP.md)** - Optional example, not part of the default runtime
+- **[Nginx Example Config](alloy/nginx-otel-example.conf)** - Optional example config
 
 ## Ports
 - `3000` - Grafana UI
@@ -46,8 +45,6 @@ Track requests from firewall → proxy → application → backend with full obs
 - `4317` - Tempo OTLP gRPC
 - `4318` - Alloy OTLP gRPC (metrics, traces, logs)
 - `4319` - Alloy OTLP HTTP (metrics, traces, logs)
-- `5140` - Alloy OTLP Syslog (TCP/UDP)
-- `5514` - Alloy Loki Syslog for OPNsense (TCP/UDP)
 - `9090` - Prometheus UI & API
 - `12345` - Alloy UI & Metrics
 

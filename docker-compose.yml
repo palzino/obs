@@ -15,8 +15,6 @@ services:
       - 12345:12345  # Alloy UI & metrics
       - 4318:4318  # OTLP gRPC receiver (metrics, traces, logs)
       - 4319:4319  # OTLP HTTP receiver (metrics, traces, logs)
-      - 5514:5514  # Loki Syslog receiver for OPNsense (TCP)
-      - 5514:5514/udp  # Loki Syslog receiver for OPNsense (UDP)
     volumes:
       - ./alloy/config.alloy:/etc/alloy/config.alloy
       - ./alloy/data:/var/lib/alloy/data
