@@ -40,7 +40,7 @@ otelcol.processor.batch "default" {
     ]
     traces  = [otelcol.processor.tail_sampling.default.input]
     logs    = [
-      otelcol.exporter.loki.default.input,
+      otelcol.exporter.otlphttp.loki.input,
       otelcol.exporter.otlphttp.newrelic.input,
     ]
   }
@@ -159,9 +159,19 @@ otelcol.exporter.otlphttp "newrelic" {
   }
 }
 
-// Export logs to Loki with trace correlation
-otelcol.exporter.loki "default" {
-  forward_to = [loki.write.default.receiver]
+// Export OTLP logs to Loki's native OTLP ingestion endpoint.
+// This keeps logs close to a standard OpenTelemetry pipeline instead of
+// translating them into Loki format inside Alloy.
+otelcol.exporter.otlphttp "loki" {
+  client {
+    endpoint = "http://loki:3100/otlp"
+    compression = "gzip"
+    timeout = "30s"
+  }
+
+  retry_on_failure {
+    enabled = true
+  }
 }
 
 // ========================================
