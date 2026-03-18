@@ -142,6 +142,9 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - "--web.enable-lifecycle"
       - "--web.enable-remote-write-receiver"
+      # Prometheus v3+ uses this dedicated OTLP receiver flag.
+      # If you pin an older v2 release, replace it with --enable-feature=otlp-write-receiver.
+      - "--web.enable-otlp-receiver"
       - "--storage.tsdb.retention.time=30d"
     ports:
       - 9090:9090

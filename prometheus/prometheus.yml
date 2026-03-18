@@ -7,7 +7,17 @@ global:
     environment: 'production'
 
 # Alloy handles all scraping and sends metrics here via remote_write API
-# The --web.enable-lifecycle flag in docker-compose.yml enables the remote write receiver
+# The docker-compose flags enable both the remote write receiver and the OTLP receiver.
+
+otlp:
+  keep_identifying_resource_attributes: true
+  promote_resource_attributes:
+    - service.name
+    - service.namespace
+    - service.instance.id
+    - service.version
+    - deployment.environment
+    - deployment.environment.name
 
 # No scrape_configs needed - Alloy does all the scraping
 # This prevents duplicate metrics and makes Alloy the central collection point
