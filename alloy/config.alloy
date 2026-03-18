@@ -34,7 +34,6 @@ otelcol.processor.batch "default" {
 
   output {
     metrics = [
-      otelcol.processor.transform.add_service_name.input,
       otelcol.exporter.otlphttp.prometheus_otlp.input,
       otelcol.exporter.otlphttp.newrelic.input,
     ]
@@ -42,28 +41,6 @@ otelcol.processor.batch "default" {
     logs    = [
       otelcol.exporter.otlphttp.loki.input,
       otelcol.exporter.otlphttp.newrelic.input,
-    ]
-  }
-}
-
-// Transform processor to map resource attributes to metric labels
-// This compatibility path keeps the existing custom dashboard working while
-// Prometheus also ingests the same OTLP metrics natively through its OTLP receiver.
-otelcol.processor.transform "add_service_name" {
-  error_mode = "ignore"
-
-  metric_statements {
-    context = "datapoint"
-    statements = [
-      "set(datapoint.attributes[\"service_name\"], resource.attributes[\"service.name\"])",
-      "set(datapoint.attributes[\"service_version\"], resource.attributes[\"service.version\"])",
-      "set(datapoint.attributes[\"service_instance_id\"], resource.attributes[\"service.instance.id\"])",
-    ]
-  }
-
-  output {
-    metrics = [
-      otelcol.exporter.prometheus.default.input,
     ]
   }
 }
@@ -111,13 +88,6 @@ otelcol.processor.tail_sampling "default" {
 // ========================================
 // OTEL Exporters
 // ========================================
-
-// Export metrics to Prometheus with resource attribute conversion
-otelcol.exporter.prometheus "default" {
-  resource_to_telemetry_conversion = true
-  add_metric_suffixes = false
-  forward_to = [prometheus.remote_write.default.receiver]
-}
 
 // Export traces to Tempo
 otelcol.exporter.otlp "tempo" {
