@@ -143,7 +143,7 @@ services:
       # Prometheus v3+ uses this dedicated OTLP receiver flag.
       # If you pin an older v2 release, replace it with --enable-feature=otlp-write-receiver.
       - "--web.enable-otlp-receiver"
-      - "--storage.tsdb.retention.time=30d"
+      - "--storage.tsdb.retention.time=14d"
     ports:
       - 9090:9090
     restart: unless-stopped
