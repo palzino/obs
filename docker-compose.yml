@@ -161,6 +161,18 @@ services:
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAF_USR}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAF_PASS}
+      - GF_SMTP_ENABLED=${SMTP_ENABLED}
+      - GF_SMTP_HOST=${SMTP_HOST}
+      - GF_SMTP_USER=${SMTP_EMAIL}
+      - GF_SMTP_PASSWORD=${SMTP_PASS}
+      - GF_SMTP_FROM_ADDRESS=${GRAF_EMAIL}
+      - GF_SMTP_FROM_NAME=${GRAF_EMAIL}
+      - GF_SMTP_SKIP_VERIFY="false"
+      - GF_SMTP_STARTTLS_POLICY="MandatoryStartTLS"
+      - GF_MANAGED_SERVICE_ACCOUNTS_ENABLED="true"
+      - GF_MANAGED_SERVICE_ACCOUNTS_API_ENABLED="true"
+      - GF_FEATURE_TOGGLES_ENABLE="externalServiceAccounts,anotherToggle"
+      
     volumes:
       - ./grafana:/etc/grafana/provisioning/datasources
       - grafana_data:/var/lib/grafana
