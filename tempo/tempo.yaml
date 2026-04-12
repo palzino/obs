@@ -24,7 +24,7 @@ ingester:
 
 compactor:
   compaction:
-    block_retention: 36h
+    block_retention: 1440h # 60 days
 
 metrics_generator:
   storage:
