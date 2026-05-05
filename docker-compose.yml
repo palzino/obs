@@ -182,6 +182,9 @@ services:
     image: grafana/mcp-grafana
     container_name: mcp-grafana
     restart: unless-stopped
+    command:
+      - "-t"
+      - "streamable-http"
     ports:
       - 8000:8000
     environment:
