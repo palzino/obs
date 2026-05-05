@@ -178,6 +178,17 @@ services:
       - grafana_data:/var/lib/grafana
     networks:
       - monitoring
+  mcp-grafana:
+    image: grafana/mcp-grafana
+    container_name: mcp-grafana
+    restart: unless-stopped
+    ports:
+      - 8000:8000
+    environment:
+      - GRAFANA_URL=https://monitoring.palvir.dev
+      - GRAFANA_SERVICE_ACCOUNT_TOKEN=${MCP_GRAF_TOKEN}
+    networks:
+      - monitoring
 volumes:
   prom_data:
   grafana_data:
