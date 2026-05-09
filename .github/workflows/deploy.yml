@@ -1,0 +1,68 @@
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref_name == 'main' || startsWith(github.ref_name, 'feature-'))
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute changed paths
+        id: changed
+        env:
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          set -eu
+
+          ZERO_SHA="0000000000000000000000000000000000000000"
+
+          if [ -z "${BEFORE}" ] || [ "${BEFORE}" = "${ZERO_SHA}" ]; then
+            git show --pretty="" --name-only "${AFTER}" | sed '/^$/d' > changed.txt
+          else
+            git diff --name-only "${BEFORE}" "${AFTER}" | sed '/^$/d' > changed.txt
+          fi
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          paths = [line.strip() for line in Path("changed.txt").read_text().splitlines() if line.strip()]
+          Path("changed.json").write_text(json.dumps(paths))
+          print(f"changed_count={len(paths)}")
+          PY
+
+          echo "changed_count=$(wc -l < changed.txt | tr -d ' ')" >> "$GITHUB_OUTPUT"
+          printf 'changed_json=%s\n' "$(cat changed.json)" >> "$GITHUB_OUTPUT"
+
+
+      - name: Skip deploy when no paths changed
+        if: steps.changed.outputs.changed_count == '0'
+        run: echo "No changed paths found, skipping deploy trigger."
+
+      - name: Trigger zino-ci
+        if: steps.changed.outputs.changed_count != '0'
+        env:
+          ZINO_DEPLOY_TOKEN: ${{ secrets.ZINO_DEPLOY_TOKEN }}
+          CHANGED_JSON: ${{ steps.changed.outputs.changed_json }}
+        run: |
+          set -eu
+
+          curl -fsS -X POST https://marketplays.co.uk/webhooks/gitea \
+            -H "Authorization: Bearer ${ZINO_DEPLOY_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d @- <<JSON
+          {
+            "ref": "${{ github.ref }}",
+            "before": "${{ github.event.before }}",
+            "after": "${{ github.sha }}",
+            "repository": {
+              "name": "obs",
+              "full_name": "${{ github.repository }}"
+            },
+            "commits": [
+              {
+                "modified": ${CHANGED_JSON}
+              }
+            ]
+          }
+          JSON
