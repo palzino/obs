@@ -12,7 +12,7 @@ services:
       - "/etc/alloy/config.alloy"
     user: "0"
     ports: 
-      - 12345:12345  # Alloy UI & metrics
+      - 12345:12345  # Alloy UI & metric
       - 4318:4318  # OTLP gRPC receiver (metrics, traces, logs)
       - 4319:4319  # OTLP HTTP receiver (metrics, traces, logs)
     volumes:
