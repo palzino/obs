@@ -4,14 +4,16 @@ on:
   push:
     branches:
       - master
+      - main
       - feature-*
   pull_request:
     branches:
       - master
+      - main
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref_name == 'main' || startsWith(github.ref_name, 'feature-'))
+    if: github.event_name == 'push' && (github.ref_name == 'master' || github.ref_name == 'main' || startsWith(github.ref_name, 'feature-'))
     steps:
       - uses: actions/checkout@v4
         with:
