@@ -188,8 +188,9 @@ services:
     ports:
       - 8000:8000
     environment:
-      - GRAFANA_URL=https://monitoring.palvir.dev
-      - GRAFANA_SERVICE_ACCOUNT_TOKEN=${MCP_GRAF_TOKEN}
+      # Use the internal service name — monitoring.palvir.dev resolves to alloy inside Docker.
+      - GRAFANA_URL=http://grafana:3000
+      - GRAFANA_SERVICE_ACCOUNT_TOKEN=${MCP_GRAF_TOKEN2}
     networks:
       - monitoring
 volumes:
