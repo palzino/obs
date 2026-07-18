@@ -1,5 +1,8 @@
 terraform {
-  backend "http" {}
+  backend "http" {
+    lock_method   = "POST"
+    unlock_method = "DELETE"
+  }
 
   required_providers {
     grafana = {

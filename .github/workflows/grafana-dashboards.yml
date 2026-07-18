@@ -29,6 +29,8 @@ jobs:
       TF_HTTP_ADDRESS: ${{ vars.TF_HTTP_ADDRESS }}
       TF_HTTP_LOCK_ADDRESS: ${{ vars.TF_HTTP_LOCK_ADDRESS }}
       TF_HTTP_UNLOCK_ADDRESS: ${{ vars.TF_HTTP_UNLOCK_ADDRESS }}
+      TF_HTTP_LOCK_METHOD: POST
+      TF_HTTP_UNLOCK_METHOD: DELETE
       TF_HTTP_USERNAME: ${{ secrets.TF_HTTP_USERNAME }}
       TF_HTTP_PASSWORD: ${{ secrets.TF_HTTP_PASSWORD }}
 
@@ -67,6 +69,8 @@ jobs:
             echo "TF_HTTP_UNLOCK_ADDRESS is unset; defaulting to \${TF_HTTP_ADDRESS}/lock"
             echo "TF_HTTP_UNLOCK_ADDRESS=${TF_HTTP_ADDRESS}/lock" >> "$GITHUB_ENV"
           fi
+
+          echo "Using Gitea-compatible Terraform HTTP backend lock settings (POST/DELETE)."
 
       - name: Terraform fmt check
         run: terraform fmt -check -recursive
