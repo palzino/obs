@@ -1,0 +1,88 @@
+name: Grafana Dashboards
+
+on:
+  pull_request:
+    paths:
+      - "grafana-dashboards/**"
+  push:
+    branches:
+      - master
+      - main
+    paths:
+      - "grafana-dashboards/**"
+  workflow_dispatch:
+
+concurrency:
+  group: grafana-dashboards-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: grafana-dashboards
+
+    env:
+      TF_VAR_grafana_url: ${{ vars.GRAFANA_URL }}
+      TF_VAR_grafana_auth: ${{ secrets.GRAFANA_AUTH }}
+      TF_HTTP_ADDRESS: ${{ vars.TF_HTTP_ADDRESS }}
+      TF_HTTP_LOCK_ADDRESS: ${{ vars.TF_HTTP_LOCK_ADDRESS }}
+      TF_HTTP_UNLOCK_ADDRESS: ${{ vars.TF_HTTP_UNLOCK_ADDRESS }}
+      TF_HTTP_USERNAME: ${{ secrets.TF_HTTP_USERNAME }}
+      TF_HTTP_PASSWORD: ${{ secrets.TF_HTTP_PASSWORD }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+
+      - name: Validate required configuration
+        run: |
+          set -eu
+
+          missing=()
+          for name in TF_VAR_grafana_url TF_VAR_grafana_auth TF_HTTP_ADDRESS TF_HTTP_USERNAME TF_HTTP_PASSWORD; do
+            if [ -z "${!name:-}" ]; then
+              missing+=("$name")
+            fi
+          done
+
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "Missing required GitHub configuration:"
+            printf '  - %s\n' "${missing[@]}"
+            exit 1
+          fi
+
+          if [ -z "${TF_HTTP_LOCK_ADDRESS:-}" ]; then
+            echo "TF_HTTP_LOCK_ADDRESS is unset; defaulting to \${TF_HTTP_ADDRESS}/lock"
+            echo "TF_HTTP_LOCK_ADDRESS=${TF_HTTP_ADDRESS}/lock" >> "$GITHUB_ENV"
+          fi
+
+          if [ -z "${TF_HTTP_UNLOCK_ADDRESS:-}" ]; then
+            echo "TF_HTTP_UNLOCK_ADDRESS is unset; defaulting to \${TF_HTTP_ADDRESS}/lock"
+            echo "TF_HTTP_UNLOCK_ADDRESS=${TF_HTTP_ADDRESS}/lock" >> "$GITHUB_ENV"
+          fi
+
+      - name: Terraform fmt check
+        run: terraform fmt -check -recursive
+
+      - name: Terraform init
+        run: terraform init
+
+      - name: Terraform validate
+        run: terraform validate
+
+      - name: Terraform plan
+        run: terraform plan -input=false -no-color -out=tfplan
+
+      - name: Upload plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: grafana-dashboards-tfplan-${{ github.run_id }}
+          path: grafana-dashboards/tfplan
+          if-no-files-found: error
