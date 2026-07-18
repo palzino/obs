@@ -15,7 +15,7 @@
       }
     ]
   },
-  "description": "OpenTelemetry APM dashboard for services sending OTLP metrics, traces, and logs through Alloy into Prometheus, Tempo, and Loki.",
+  "description": "OpenTelemetry APM dashboard for services sending OTLP metrics, traces, and logs through Alloy into Prometheus, Tempo, and Loki. Deployed via Terraform from the obs repo.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -481,11 +481,27 @@
       ],
       "title": "Recent traces",
       "type": "traces"
+    },
+    {
+      "gridPos": { "h": 2, "w": 24, "x": 0, "y": 58 },
+      "id": 14,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "Managed by **Terraform CI** from `obs/grafana-dashboards`. Deployment test marker.",
+        "mode": "markdown"
+      },
+      "title": "",
+      "transparent": true,
+      "type": "text"
     }
   ],
   "refresh": "30s",
   "schemaVersion": 39,
-  "tags": ["obs", "opentelemetry", "apm", "alloy"],
+  "tags": ["obs", "opentelemetry", "apm", "alloy", "terraform-ci"],
   "templating": {
     "list": [
       {
@@ -537,5 +553,5 @@
   "timezone": "browser",
   "title": "OpenTelemetry APM",
   "uid": "obs-otel-apm",
-  "version": 1
+  "version": 2
 }
