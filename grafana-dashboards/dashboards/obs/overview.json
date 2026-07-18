@@ -18,7 +18,9 @@
   "graphTooltip": 1,
   "id": null,
   "links": [
+    { "icon": "external link", "includeVars": false, "targetBlank": false, "title": "Monitoring stack", "type": "link", "url": "/d/obs-monitoring-stack" },
     { "icon": "external link", "includeVars": false, "targetBlank": false, "title": "Node Exporter", "type": "link", "url": "/d/obs-node-exporter" },
+    { "icon": "external link", "includeVars": false, "targetBlank": false, "title": "OPNsense", "type": "link", "url": "/d/obs-opnsense" },
     { "icon": "external link", "includeVars": false, "targetBlank": false, "title": "Proxmox", "type": "link", "url": "/d/Dp7Cd57Zza" },
     { "icon": "external link", "includeVars": false, "targetBlank": false, "title": "Guest reconcile", "type": "link", "url": "/d/obs-guest-reconcile" },
     { "icon": "external link", "includeVars": false, "targetBlank": false, "title": "cAdvisor", "type": "link", "url": "/d/obs-cadvisor" },
