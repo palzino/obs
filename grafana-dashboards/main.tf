@@ -31,4 +31,5 @@ resource "grafana_dashboard" "obs" {
   for_each    = fileset("${path.module}/dashboards/obs", "*.json")
   config_json = file("${path.module}/dashboards/obs/${each.key}")
   folder      = grafana_folder.obs.id
+  overwrite   = true
 }
