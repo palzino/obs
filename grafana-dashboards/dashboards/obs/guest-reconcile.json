@@ -12,7 +12,7 @@
       }
     ]
   },
-  "description": "Compare Proxmox-reported guest CPU/memory with node exporter (inside the VM) and cAdvisor container totals. Pick the Proxmox guest, then select the matching node exporter host and cAdvisor endpoint if the VM runs Docker.",
+  "description": "Compare Proxmox-reported guest CPU/memory with node exporter (inside the VM) and cAdvisor container totals. Select a Proxmox guest — node and cAdvisor targets are linked automatically via the proxmox_guest label in Alloy.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -24,7 +24,7 @@
       "id": 18,
       "options": {
         "code": { "language": "markdown", "showLineNumbers": false, "showMiniMap": false },
-        "content": "**How to use:** select the Proxmox guest, then the node exporter host running inside that VM. If it is a Docker host, also pick the cAdvisor scrape target.\n\n| Proxmox guest | Node exporter | cAdvisor |\n|---|---|---|\n| [lab-pgdb](?var-guest=lab-pgdb&var-node=database-vm&var-cadvisor=192.168.0.145:8050) | database-vm | 192.168.0.145:8050 |\n| [prod-apps](?var-guest=prod-apps&var-node=prod-docker-server&var-cadvisor=192.168.1.16:8050) | prod-docker-server | 192.168.1.16:8050 |\n| [monitoring-stack](?var-guest=monitoring-stack&var-node=zinohub&var-cadvisor=cadvisor:8080) | zinohub | cadvisor:8080 |\n| [qbit-linux](?var-guest=qbit-linux&var-node=qbit&var-cadvisor=none) | qbit | — |\n| [wireguard](?var-guest=wireguard&var-node=wg&var-cadvisor=none) | wg | — |\n| [ark](?var-guest=ark&var-node=ark-server&var-cadvisor=192.168.1.245:8050) | ark-server | 192.168.1.245:8050 |\n| [mc-server](?var-guest=mc-server&var-node=minecraft&var-cadvisor=none) | minecraft | — |\n| [internal-nginx](?var-guest=internal-nginx&var-node=nginx&var-cadvisor=none) | nginx | — |\n| [Opnsense](?var-guest=Opnsense&var-node=opnsense&var-cadvisor=none) | opnsense | — |\n\nProxmox guest CPU is % of allocated vCPUs. Node exporter CPU is % of all VM cores. cAdvisor CPU is container CPU summed and normalized to VM core count.",
+        "content": "**How to use:** pick a Proxmox guest — Alloy links node exporter and cAdvisor via the `proxmox_guest` label.\n\n| Guest | Node instance | cAdvisor |\n|---|---|---|\n| [lab-pgdb](?var-guest=lab-pgdb) | database-vm | yes |\n| [prod-apps](?var-guest=prod-apps) | prod-docker-server | yes |\n| [monitoring-stack](?var-guest=monitoring-stack) | — | yes (local cadvisor) |\n| [Alpine-Jellyfin](?var-guest=Alpine-Jellyfin) | zinohub (192.168.0.33) | **no** — Docker runs on the VM but cAdvisor is not deployed there |\n| [qbit-linux](?var-guest=qbit-linux) | qbit | no |\n| [wireguard](?var-guest=wireguard) | wg | no |\n| [ark](?var-guest=ark) | ark-server | yes |\n| [mc-server](?var-guest=mc-server) | minecraft | no |\n| [ng-alpine](?var-guest=ng-alpine) | nginx | no |\n\n**Note:** OPNsense is a physical appliance (node exporter only, not a Proxmox guest).\n\nProxmox guest CPU is % of allocated vCPUs. Node exporter CPU is % of all VM cores. cAdvisor CPU is container CPU summed and normalized to VM core count.",
         "mode": "markdown"
       },
       "title": "Mapping guide",
@@ -193,8 +193,8 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "up{job=\"prometheus.scrape.node_exporter\", instance=\"$node\"}",
-          "legendFormat": "node",
+          "expr": "up{job=\"prometheus.scrape.node_exporter\", proxmox_guest=\"$guest\"}",
+          "legendFormat": "{{instance}}",
           "refId": "A"
         }
       ],
@@ -227,7 +227,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "up{job=\"cadvisor\", instance=\"$cadvisor\"}",
+          "expr": "up{job=\"cadvisor\", proxmox_guest=\"$guest\"}",
           "legendFormat": "cadvisor",
           "refId": "A"
         }
@@ -314,7 +314,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "100 - (avg(rate(node_cpu_seconds_total{job=\"prometheus.scrape.node_exporter\", instance=\"$node\", mode=\"idle\"}[$__rate_interval])) * 100)",
+          "expr": "100 - (avg(rate(node_cpu_seconds_total{job=\"prometheus.scrape.node_exporter\", proxmox_guest=\"$guest\", mode=\"idle\"}[$__rate_interval])) * 100)",
           "legendFormat": "Node",
           "refId": "A"
         }
@@ -354,7 +354,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "100 * sum(rate(container_cpu_usage_seconds_total{job=\"cadvisor\", instance=\"$cadvisor\", name=~\".+\"}[$__rate_interval])) / clamp_min(count(count by (cpu) (node_cpu_seconds_total{job=\"prometheus.scrape.node_exporter\", instance=\"$node\", mode=\"idle\"})), 1)",
+          "expr": "100 * sum(rate(container_cpu_usage_seconds_total{job=\"cadvisor\", proxmox_guest=\"$guest\", name=~\".+\"}[$__rate_interval])) / clamp_min(count(count by (cpu) (node_cpu_seconds_total{job=\"prometheus.scrape.node_exporter\", proxmox_guest=\"$guest\", mode=\"idle\"})), 1)",
           "legendFormat": "cAdvisor",
           "refId": "A"
         }
@@ -416,13 +416,13 @@
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "100 - (avg(rate(node_cpu_seconds_total{job=\"prometheus.scrape.node_exporter\", instance=\"$node\", mode=\"idle\"}[$__rate_interval])) * 100)",
+          "expr": "100 - (avg(rate(node_cpu_seconds_total{job=\"prometheus.scrape.node_exporter\", proxmox_guest=\"$guest\", mode=\"idle\"}[$__rate_interval])) * 100)",
           "legendFormat": "Node exporter",
           "refId": "B"
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "100 * sum(rate(container_cpu_usage_seconds_total{job=\"cadvisor\", instance=\"$cadvisor\", name=~\".+\"}[$__rate_interval])) / clamp_min(count(count by (cpu) (node_cpu_seconds_total{job=\"prometheus.scrape.node_exporter\", instance=\"$node\", mode=\"idle\"})), 1)",
+          "expr": "100 * sum(rate(container_cpu_usage_seconds_total{job=\"cadvisor\", proxmox_guest=\"$guest\", name=~\".+\"}[$__rate_interval])) / clamp_min(count(count by (cpu) (node_cpu_seconds_total{job=\"prometheus.scrape.node_exporter\", proxmox_guest=\"$guest\", mode=\"idle\"})), 1)",
           "legendFormat": "cAdvisor total",
           "refId": "C"
         }
@@ -491,7 +491,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "node_memory_MemTotal_bytes{job=\"prometheus.scrape.node_exporter\", instance=\"$node\"} - node_memory_MemAvailable_bytes{job=\"prometheus.scrape.node_exporter\", instance=\"$node\"}",
+          "expr": "node_memory_MemTotal_bytes{job=\"prometheus.scrape.node_exporter\", proxmox_guest=\"$guest\"} - node_memory_MemAvailable_bytes{job=\"prometheus.scrape.node_exporter\", proxmox_guest=\"$guest\"}",
           "legendFormat": "Node used",
           "refId": "A"
         }
@@ -522,7 +522,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(container_memory_rss{job=\"cadvisor\", instance=\"$cadvisor\", name=~\".+\"})",
+          "expr": "sum(container_memory_rss{job=\"cadvisor\", proxmox_guest=\"$guest\", name=~\".+\"})",
           "legendFormat": "cAdvisor RSS",
           "refId": "A"
         }
@@ -581,13 +581,13 @@
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "node_memory_MemTotal_bytes{job=\"prometheus.scrape.node_exporter\", instance=\"$node\"} - node_memory_MemAvailable_bytes{job=\"prometheus.scrape.node_exporter\", instance=\"$node\"}",
+          "expr": "node_memory_MemTotal_bytes{job=\"prometheus.scrape.node_exporter\", proxmox_guest=\"$guest\"} - node_memory_MemAvailable_bytes{job=\"prometheus.scrape.node_exporter\", proxmox_guest=\"$guest\"}",
           "legendFormat": "Node used",
           "refId": "B"
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(container_memory_rss{job=\"cadvisor\", instance=\"$cadvisor\", name=~\".+\"})",
+          "expr": "sum(container_memory_rss{job=\"cadvisor\", proxmox_guest=\"$guest\", name=~\".+\"})",
           "legendFormat": "cAdvisor RSS",
           "refId": "C"
         }
@@ -622,13 +622,13 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "(node_memory_MemTotal_bytes{job=\"prometheus.scrape.node_exporter\", instance=\"$node\"} - node_memory_MemAvailable_bytes{job=\"prometheus.scrape.node_exporter\", instance=\"$node\"}) - on() group_left() (pve_memory_usage_bytes{instance=\"$pve_host\"} and on(id) pve_guest_info{name=\"$guest\"})",
+          "expr": "(node_memory_MemTotal_bytes{job=\"prometheus.scrape.node_exporter\", proxmox_guest=\"$guest\"} - node_memory_MemAvailable_bytes{job=\"prometheus.scrape.node_exporter\", proxmox_guest=\"$guest\"}) - on() group_left() (pve_memory_usage_bytes{instance=\"$pve_host\"} and on(id) pve_guest_info{name=\"$guest\"})",
           "legendFormat": "Node - Proxmox",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(container_memory_rss{job=\"cadvisor\", instance=\"$cadvisor\", name=~\".+\"}) - on() group_left() (node_memory_MemTotal_bytes{job=\"prometheus.scrape.node_exporter\", instance=\"$node\"} - node_memory_MemAvailable_bytes{job=\"prometheus.scrape.node_exporter\", instance=\"$node\"})",
+          "expr": "sum(container_memory_rss{job=\"cadvisor\", proxmox_guest=\"$guest\", name=~\".+\"}) - on() group_left() (node_memory_MemTotal_bytes{job=\"prometheus.scrape.node_exporter\", proxmox_guest=\"$guest\"} - node_memory_MemAvailable_bytes{job=\"prometheus.scrape.node_exporter\", proxmox_guest=\"$guest\"})",
           "legendFormat": "cAdvisor RSS - Node used",
           "refId": "B"
         }
@@ -664,13 +664,13 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "(100 - (avg(rate(node_cpu_seconds_total{job=\"prometheus.scrape.node_exporter\", instance=\"$node\", mode=\"idle\"}[$__rate_interval])) * 100)) - on() group_left() (100 * ((pve_cpu_usage_ratio{instance=\"$pve_host\"} / pve_cpu_usage_limit) and on(id) pve_guest_info{name=\"$guest\"}))",
+          "expr": "(100 - (avg(rate(node_cpu_seconds_total{job=\"prometheus.scrape.node_exporter\", proxmox_guest=\"$guest\", mode=\"idle\"}[$__rate_interval])) * 100)) - on() group_left() (100 * ((pve_cpu_usage_ratio{instance=\"$pve_host\"} / pve_cpu_usage_limit) and on(id) pve_guest_info{name=\"$guest\"}))",
           "legendFormat": "Node - Proxmox",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "(100 * sum(rate(container_cpu_usage_seconds_total{job=\"cadvisor\", instance=\"$cadvisor\", name=~\".+\"}[$__rate_interval])) / clamp_min(count(count by (cpu) (node_cpu_seconds_total{job=\"prometheus.scrape.node_exporter\", instance=\"$node\", mode=\"idle\"})), 1)) - on() group_left() (100 - (avg(rate(node_cpu_seconds_total{job=\"prometheus.scrape.node_exporter\", instance=\"$node\", mode=\"idle\"}[$__rate_interval])) * 100))",
+          "expr": "(100 * sum(rate(container_cpu_usage_seconds_total{job=\"cadvisor\", proxmox_guest=\"$guest\", name=~\".+\"}[$__rate_interval])) / clamp_min(count(count by (cpu) (node_cpu_seconds_total{job=\"prometheus.scrape.node_exporter\", proxmox_guest=\"$guest\", mode=\"idle\"})), 1)) - on() group_left() (100 - (avg(rate(node_cpu_seconds_total{job=\"prometheus.scrape.node_exporter\", proxmox_guest=\"$guest\", mode=\"idle\"}[$__rate_interval])) * 100))",
           "legendFormat": "cAdvisor - Node",
           "refId": "B"
         }
@@ -719,7 +719,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(rate(container_cpu_usage_seconds_total{job=\"cadvisor\", instance=\"$cadvisor\", name=~\".+\"}[$__rate_interval])) by (name) * 100",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{job=\"cadvisor\", proxmox_guest=\"$guest\", name=~\".+\"}[$__rate_interval])) by (name) * 100",
           "format": "table",
           "instant": true,
           "legendFormat": "__auto",
@@ -727,7 +727,7 @@
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(container_memory_rss{job=\"cadvisor\", instance=\"$cadvisor\", name=~\".+\"}) by (name)",
+          "expr": "sum(container_memory_rss{job=\"cadvisor\", proxmox_guest=\"$guest\", name=~\".+\"}) by (name)",
           "format": "table",
           "instant": true,
           "legendFormat": "__auto",
@@ -735,7 +735,7 @@
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "(time() - container_start_time_seconds{job=\"cadvisor\", instance=\"$cadvisor\", name=~\".+\"}) / 86400",
+          "expr": "(time() - container_start_time_seconds{job=\"cadvisor\", proxmox_guest=\"$guest\", name=~\".+\"}) / 86400",
           "format": "table",
           "instant": true,
           "legendFormat": "__auto",
@@ -786,7 +786,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(rate(container_cpu_usage_seconds_total{job=\"cadvisor\", instance=\"$cadvisor\", name=~\".+\"}[$__rate_interval])) by (name) * 100",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{job=\"cadvisor\", proxmox_guest=\"$guest\", name=~\".+\"}[$__rate_interval])) by (name) * 100",
           "legendFormat": "{{name}}",
           "refId": "A"
         }
@@ -819,7 +819,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(container_memory_rss{job=\"cadvisor\", instance=\"$cadvisor\", name=~\".+\"}) by (name)",
+          "expr": "sum(container_memory_rss{job=\"cadvisor\", proxmox_guest=\"$guest\", name=~\".+\"}) by (name)",
           "legendFormat": "{{name}}",
           "refId": "A"
         }
@@ -855,7 +855,7 @@
       {
         "current": { "selected": false, "text": "lab-pgdb", "value": "lab-pgdb" },
         "datasource": { "type": "prometheus", "uid": "prometheus" },
-        "definition": "label_values(pve_guest_info{template=\"0\"}, name)",
+        "definition": "label_values(up{proxmox_guest!=\"\"}, proxmox_guest)",
         "hide": 0,
         "includeAll": false,
         "label": "Guest",
@@ -864,48 +864,12 @@
         "options": [],
         "query": {
           "qryType": 1,
-          "query": "label_values(pve_guest_info{template=\"0\"}, name)",
+          "query": "label_values(up{proxmox_guest!=\"\"}, proxmox_guest)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 2,
         "sort": 1,
         "type": "query"
-      },
-      {
-        "current": { "selected": false, "text": "database-vm", "value": "database-vm" },
-        "datasource": { "type": "prometheus", "uid": "prometheus" },
-        "definition": "label_values(up{job=\"prometheus.scrape.node_exporter\"}, instance)",
-        "hide": 0,
-        "includeAll": false,
-        "label": "Node exporter",
-        "multi": false,
-        "name": "node",
-        "options": [],
-        "query": {
-          "qryType": 1,
-          "query": "label_values(up{job=\"prometheus.scrape.node_exporter\"}, instance)",
-          "refId": "PrometheusVariableQueryEditor-VariableQuery"
-        },
-        "refresh": 2,
-        "sort": 1,
-        "type": "query"
-      },
-      {
-        "current": { "selected": false, "text": "192.168.0.145:8050", "value": "192.168.0.145:8050" },
-        "hide": 0,
-        "includeAll": false,
-        "label": "cAdvisor",
-        "multi": false,
-        "name": "cadvisor",
-        "options": [
-          { "selected": false, "text": "none", "value": "none" },
-          { "selected": true, "text": "192.168.0.145:8050", "value": "192.168.0.145:8050" },
-          { "selected": false, "text": "192.168.1.16:8050", "value": "192.168.1.16:8050" },
-          { "selected": false, "text": "cadvisor:8080", "value": "cadvisor:8080" },
-          { "selected": false, "text": "192.168.1.245:8050", "value": "192.168.1.245:8050" }
-        ],
-        "query": "none,192.168.0.145:8050,192.168.1.16:8050,cadvisor:8080,192.168.1.245:8050",
-        "type": "custom"
       }
     ]
   },

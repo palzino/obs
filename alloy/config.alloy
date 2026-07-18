@@ -214,48 +214,93 @@ prometheus.scrape "host_metrics" {
 prometheus.scrape "node_exporter" {
   targets = [
     {
-      __address__ = "192.168.0.33:9100",
-      instance = "zinohub",
+      __address__    = "192.168.0.33:9100",
+      instance       = "zinohub",
+      proxmox_guest  = "Alpine-Jellyfin",
     },
     {
-      __address__ = "192.168.1.16:9100",
-      instance = "prod-docker-server",
+      __address__    = "192.168.1.16:9100",
+      instance       = "prod-docker-server",
+      proxmox_guest  = "prod-apps",
     },
     {
-      __address__ = "192.168.0.145:9100",
-      instance = "database-vm",
+      __address__    = "192.168.0.145:9100",
+      instance       = "database-vm",
+      proxmox_guest  = "lab-pgdb",
     },
     {
-      __address__ = "192.168.0.1:9100",
-      instance = "opnsense",
+      __address__    = "192.168.0.1:9100",
+      instance       = "opnsense",
     },
     {
-      __address__ = "192.168.2.10:9100",
-      instance = "qbit",
+      __address__    = "192.168.2.10:9100",
+      instance       = "qbit",
+      proxmox_guest  = "qbit-linux",
     },
     {
-      __address__ = "192.168.1.20:9100",
-      instance = "minecraft",
+      __address__    = "192.168.1.20:9100",
+      instance       = "minecraft",
+      proxmox_guest  = "mc-server",
     },
     {
-      __address__ = "192.168.0.65:9100",
-      instance = "proxmox",
+      __address__    = "192.168.0.65:9100",
+      instance       = "proxmox",
     },
     {
-      __address__ = "192.168.0.38:9100",
-      instance = "wg",
+      __address__    = "192.168.0.38:9100",
+      instance       = "wg",
+      proxmox_guest  = "wireguard",
     },
     {
-      __address__ = "192.168.1.246:9100",
-      instance = "nginx",
+      __address__    = "192.168.1.246:9100",
+      instance       = "nginx",
+      proxmox_guest  = "ng-alpine",
     },
     {
-      __address__ = "192.168.1.245:9100",
-      instance = "ark-server",
+      __address__    = "192.168.1.245:9100",
+      instance       = "ark-server",
+      proxmox_guest  = "ark",
     },
   ]
   forward_to = [prometheus.remote_write.default.receiver]
   scrape_interval = "15s"
+}
+
+prometheus.relabel "cadvisor" {
+  forward_to = [prometheus.remote_write.default.receiver]
+
+  rule {
+    action       = "replace"
+    target_label = "job"
+    replacement  = "cadvisor"
+  }
+}
+
+prometheus.scrape "cadvisor" {
+  targets = [
+    {
+      __address__   = "192.168.0.145:8050",
+      instance      = "192.168.0.145:8050",
+      proxmox_guest = "lab-pgdb",
+    },
+    {
+      __address__   = "192.168.1.16:8050",
+      instance      = "192.168.1.16:8050",
+      proxmox_guest = "prod-apps",
+    },
+    {
+      __address__   = "192.168.1.245:8050",
+      instance      = "192.168.1.245:8050",
+      proxmox_guest = "ark",
+    },
+    {
+      __address__   = "cadvisor:8080",
+      instance      = "cadvisor:8080",
+      proxmox_guest = "monitoring-stack",
+    },
+  ]
+  forward_to      = [prometheus.relabel.cadvisor.receiver]
+  scrape_interval = "10s"
 }
 
 prometheus.scrape "qbittorrent" {
