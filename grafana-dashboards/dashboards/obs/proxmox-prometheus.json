@@ -519,9 +519,10 @@
             }
           },
           "mappings": [],
+          "max": 1,
           "min": 0,
           "thresholds": {
-            "mode": "percentage",
+            "mode": "absolute",
             "steps": [
               {
                 "color": "green",
@@ -529,14 +530,15 @@
               },
               {
                 "color": "orange",
-                "value": 70
+                "value": 0.7
               },
               {
                 "color": "red",
-                "value": 90
+                "value": 0.9
               }
             ]
-          }
+          },
+          "unit": "percentunit"
         },
         "overrides": []
       },
@@ -569,39 +571,10 @@
           "expr": "pve_cpu_usage_ratio{instance=\"$instance\"} and on(id) pve_node_info",
           "legendFormat": "__auto",
           "range": true,
-          "refId": "usage"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "pve_cpu_usage_limit{instance=\"$instance\"} and on(id) pve_node_info",
-          "format": "table",
-          "hide": false,
-          "instant": true,
-          "legendFormat": "__auto",
-          "range": false,
-          "refId": "total"
+          "refId": "A"
         }
       ],
       "title": "CPU history",
-      "transformations": [
-        {
-          "id": "configFromData",
-          "options": {
-            "configRefId": "total",
-            "mappings": [
-              {
-                "fieldName": "Value",
-                "handlerKey": "max"
-              }
-            ]
-          }
-        }
-      ],
       "type": "timeseries"
     },
     {
@@ -680,7 +653,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "pve_cpu_usage_ratio{instance=\"$instance\"} / pve_cpu_usage_limit and on(id) pve_node_info",
+          "expr": "pve_cpu_usage_ratio{instance=\"$instance\"} and on(id) pve_node_info",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "",
@@ -761,7 +734,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "pve_cpu_usage_limit and on(id) pve_node_info",
+          "expr": "pve_cpu_usage_limit{instance=\"$instance\"} and on(id) pve_node_info",
           "format": "table",
           "instant": true,
           "legendFormat": "__auto",
