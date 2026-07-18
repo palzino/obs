@@ -182,15 +182,30 @@ services:
     image: grafana/mcp-grafana
     container_name: mcp-grafana
     restart: unless-stopped
+    depends_on:
+      - grafana
     command:
       - "-t"
       - "streamable-http"
+      - "--address"
+      - "0.0.0.0:8000"
+      - "--allowed-hosts"
+      - "*"
+      - "--metrics"
+      # Self-hosted stack: cloud-native categories omitted; influxdb for Proxmox Flux.
+      - "--enabled-tools"
+      - "search,datasource,prometheus,loki,alerting,dashboard,folder,navigation,proxied,annotations,snapshot,influxdb,examples,runpanelquery"
     ports:
       - 8000:8000
     environment:
-      # Use the internal service name — monitoring.palvir.dev resolves to alloy inside Docker.
       - GRAFANA_URL=http://grafana:3000
       - GRAFANA_SERVICE_ACCOUNT_TOKEN=${MCP_GRAF_TOKEN2}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8000/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     networks:
       - monitoring
 volumes:
