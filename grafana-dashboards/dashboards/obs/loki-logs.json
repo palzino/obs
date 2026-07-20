@@ -110,7 +110,7 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "sum(rate({service_name=~\"$service\"} [$__rate_interval]))",
+          "expr": "sum(rate({service_name=~\"$service\"}[$__interval]))",
           "legendFormat": "lines/s",
           "queryType": "range",
           "refId": "A"
@@ -178,7 +178,7 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "sum(rate({service_name=~\"$service\"} | detected_level=~\"(?i)error\" [$__rate_interval]))",
+          "expr": "sum(rate({service_name=~\"$service\"} | detected_level=~\"(?i)error\" [$__interval]))",
           "legendFormat": "errors/s",
           "queryType": "range",
           "refId": "A"
@@ -246,7 +246,7 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "sum(rate({service_name=~\"$service\"} | detected_level=~\"(?i)warn\" [$__rate_interval]))",
+          "expr": "sum(rate({service_name=~\"$service\"} | detected_level=~\"(?i)warn\" [$__interval]))",
           "legendFormat": "warns/s",
           "queryType": "range",
           "refId": "A"
@@ -306,7 +306,7 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "count(sum by (service_name) (count_over_time({service_name=~\"$service\"} [$__range])))",
+          "expr": "count(sum by (service_name) (count_over_time({service_name=~\"$service\"}[$__range])))",
           "legendFormat": "services",
           "queryType": "instant",
           "refId": "A"
@@ -374,7 +374,7 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "sum by (service_name) (count_over_time({service_name=~\"$service\"} [$__interval]))",
+          "expr": "sum by (service_name) (count_over_time({service_name=~\"$service\"}[$__interval]))",
           "legendFormat": "{{service_name}}",
           "queryType": "range",
           "refId": "A"
@@ -461,7 +461,7 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "sum by (detected_level) (count_over_time({service_name=~\"$service\"} [$__interval]))",
+          "expr": "sum by (detected_level) (count_over_time({service_name=~\"$service\"}[$__interval]))",
           "legendFormat": "{{detected_level}}",
           "queryType": "range",
           "refId": "A"
@@ -517,7 +517,7 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "sum by (host) (rate({service_name=~\"$service\"} [$__rate_interval]))",
+          "expr": "sum by (host) (rate({service_name=~\"$service\"}[$__interval]))",
           "legendFormat": "{{host}}",
           "queryType": "range",
           "refId": "A"
@@ -553,7 +553,7 @@
               }
             ]
           },
-          "unit": "ops"
+          "unit": "short"
         },
         "overrides": []
       },
@@ -587,7 +587,7 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "topk(10, sum by (service_name) (rate({service_name=~\"$service\"} [$__rate_interval])))",
+          "expr": "topk(10, sum by (service_name) (count_over_time({service_name=~\"$service\"}[$__range])))",
           "legendFormat": "{{service_name}}",
           "queryType": "instant",
           "refId": "A"
@@ -694,7 +694,15 @@
     "list": [
       {
         "allValue": ".+",
-        "current": {},
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
         "datasource": {
           "type": "loki",
           "uid": "loki"
