@@ -351,3 +351,45 @@ loki.source.file "system_logs" {
   ]
   forward_to = [loki.write.default.receiver]
 }
+
+loki.source.syslog "external_nginx" {
+  listener {
+    address       = "0.0.0.0:1514"
+    protocol      = "udp"
+    syslog_format = "rfc3164"
+  }
+
+  forward_to = [loki.process.external_nginx.receiver]
+}
+
+loki.process "external_nginx" {
+  stage.static_labels {
+    values = {
+      job  = "nginx"
+      host = "external-proxy"
+    }
+  }
+
+  forward_to = [loki.write.default.receiver]
+}
+
+loki.source.syslog "turnkey_nginx" {
+  listener {
+    address       = "0.0.0.0:1515"
+    protocol      = "udp"
+    syslog_format = "rfc3164"
+  }
+
+  forward_to = [loki.process.turnkey_nginx.receiver]
+}
+
+loki.process "turnkey_nginx" {
+  stage.static_labels {
+    values = {
+      job  = "nginx"
+      host = "gitea-turnkey"
+    }
+  }
+
+  forward_to = [loki.write.default.receiver]
+}
