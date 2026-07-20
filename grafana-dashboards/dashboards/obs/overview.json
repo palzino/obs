@@ -27,7 +27,8 @@
     { "icon": "external link", "includeVars": false, "targetBlank": false, "title": "PostgreSQL", "type": "link", "url": "/d/obs-postgresql" },
     { "icon": "external link", "includeVars": false, "targetBlank": false, "title": "NGINX", "type": "link", "url": "/d/obs-nginx" },
     { "icon": "external link", "includeVars": false, "targetBlank": false, "title": "AdGuard", "type": "link", "url": "/d/MIBVglomg" },
-    { "icon": "external link", "includeVars": false, "targetBlank": false, "title": "OpenTelemetry APM", "type": "link", "url": "/d/obs-otel-apm" }
+    { "icon": "external link", "includeVars": false, "targetBlank": false, "title": "OpenTelemetry APM", "type": "link", "url": "/d/obs-otel-apm" },
+    { "icon": "external link", "includeVars": false, "targetBlank": false, "title": "Loki logs", "type": "link", "url": "/d/obs-loki-logs" }
   ],
   "panels": [
     {

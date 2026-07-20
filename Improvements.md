@@ -21,7 +21,7 @@ Living checklist for the homelab observability stack (Alloy, Prometheus, Loki, T
 - [x] `proxmox_guest` relabelling on node_exporter and cadvisor targets for guest reconcile
 - [x] Physical OPNsense at `192.168.0.1` monitored via node exporter; no `proxmox_guest` label (hot-standby Proxmox VM excluded)
 
-### Dashboards in `obs` folder (12)
+### Dashboards in `obs` folder (13)
 
 | Dashboard | UID | Notes |
 |-----------|-----|-------|
@@ -37,6 +37,7 @@ Living checklist for the homelab observability stack (Alloy, Prometheus, Loki, T
 | AdGuard Exporter | `MIBVglomg` | DNS filtering (existing layout, fixed datasource) |
 | qBittorrent | `OEyH9tQZk` | Torrent client (existing layout, fixed datasource) |
 | OpenTelemetry APM | `obs-otel-apm` | App traces/metrics/logs |
+| Loki logs | `obs-loki-logs` | Log volume, error/warn rates, top noisy services, live search |
 
 ### Alert rules (`obs infrastructure` → Telegram)
 
@@ -82,16 +83,9 @@ Keep if still useful:
 
 Priority order for new work.
 
-### 1. Loki logs overview — high value, medium effort
+### 1. Loki logs overview — done
 
-Loki is running (Docker + syslog + OTLP) but has no dedicated dashboard.
-
-Suggested panels:
-
-- Log volume by job / container / `service_name`
-- Error rate (`detected_level=error` or pattern match)
-- Top noisy containers
-- Pairs well with `obs-otel-apm` for app debugging
+Shipped as `obs-loki-logs` (`dashboards/obs/loki-logs.json`): volume by service/level/host, error/warn rates, top noisy services, live + error log panels.
 
 ### 2. Docker fleet summary — medium effort
 
@@ -181,7 +175,7 @@ Design decisions to avoid scope creep:
 
 Pick one:
 
-1. **Loki logs overview** — highest remaining dashboard value
-2. **Archive legacy dashboards** — quick UI cleanup
-3. **Node exporter on monitoring-stack VM** — closes reconcile gap
-4. **Docker fleet summary** — fleet-wide container view
+1. **Archive legacy dashboards** — quick UI cleanup
+2. **Node exporter on monitoring-stack VM** — closes reconcile gap
+3. **Docker fleet summary** — fleet-wide container view
+4. **Tempo / traces overview** — if otel-apm gaps appear
