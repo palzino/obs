@@ -15,6 +15,8 @@ services:
       - 12345:12345  # Alloy UI & metrics
       - 4318:4318  # OTLP gRPC receiver (metrics, traces, logs)
       - 4319:4319  # OTLP HTTP receiver (metrics, traces, logs)
+      - 1514:1514  # Syslog receiver (logs)
+      - 1515:1515  # Syslog receiver (logs)
     volumes:
       - ./alloy/config.alloy:/etc/alloy/config.alloy
       - ./alloy/data:/var/lib/alloy/data
