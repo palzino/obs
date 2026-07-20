@@ -365,8 +365,8 @@ loki.source.syslog "external_nginx" {
 loki.process "external_nginx" {
   stage.static_labels {
     values = {
-      job  = "nginx"
-      host = "external-proxy"
+      job  = "nginx",
+      host = "external-proxy",
     }
   }
 
@@ -386,8 +386,8 @@ loki.source.syslog "turnkey_nginx" {
 loki.process "turnkey_nginx" {
   stage.static_labels {
     values = {
-      job  = "nginx"
-      host = "gitea-turnkey"
+      job  = "nginx",
+      host = "gitea-turnkey",
     }
   }
 
