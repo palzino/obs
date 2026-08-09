@@ -261,6 +261,11 @@ prometheus.scrape "node_exporter" {
       instance       = "ark-server",
       proxmox_guest  = "ark",
     },
+    {
+      __address__    = "192.168.0.131:9100",
+      instance       = "dev-box-vm",
+      proxmox_guest  = "dev-box-vm",
+    },
   ]
   forward_to = [prometheus.remote_write.default.receiver]
   scrape_interval = "15s"
