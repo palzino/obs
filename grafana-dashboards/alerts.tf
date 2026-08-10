@@ -504,3 +504,94 @@ resource "grafana_rule_group" "obs_infrastructure" {
     }
   }
 }
+
+# Site health-check probes (blackbox). Evaluated every 15s so a 30s "for"
+# equals two failed 15s scrape intervals before paging Telegram.
+resource "grafana_rule_group" "obs_site_monitor" {
+  provider = grafana.grafana
+
+  name             = "obs site monitor"
+  folder_uid       = grafana_folder.obs.uid
+  interval_seconds = 15
+
+  rule {
+    name           = "Site down"
+    condition      = "C"
+    for            = "30s"
+    no_data_state  = "Alerting"
+    exec_err_state = "Alerting"
+
+    labels = merge(local.alert_labels, {
+      severity = "critical"
+    })
+
+    annotations = {
+      summary     = "Site down: {{ $labels.instance }}"
+      description = "Health-check probe for {{ $labels.instance }} has been failing (probe_success == 0) for 30s. Check the service and its host."
+    }
+
+    data {
+      ref_id = "A"
+      relative_time_range {
+        from = 300
+        to   = 0
+      }
+      datasource_uid = local.prom_datasource_uid
+      model = jsonencode({
+        expr          = "probe_success{job=\"prometheus.scrape.health_checks\"} == bool 0"
+        refId         = "A"
+        editorMode    = "code"
+        instant       = true
+        range         = false
+        intervalMs    = 1000
+        maxDataPoints = 43200
+      })
+    }
+
+    data {
+      ref_id         = "B"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+      model = jsonencode({
+        type       = "reduce"
+        expression = "A"
+        reducer    = "last"
+        refId      = "B"
+      })
+    }
+
+    data {
+      ref_id         = "C"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+      model = jsonencode({
+        type       = "threshold"
+        expression = "B"
+        refId      = "C"
+        conditions = [{
+          evaluator = {
+            type   = "gt"
+            params = [0]
+          }
+          operator = {
+            type = "and"
+          }
+          reducer = {
+            type = "last"
+          }
+        }]
+      })
+    }
+
+    notification_settings {
+      contact_point = local.alert_notification_settings.contact_point
+      group_by      = local.alert_notification_settings.group_by
+    }
+  }
+}
