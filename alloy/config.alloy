@@ -319,6 +319,50 @@ prometheus.scrape "qbittorrent" {
   scrape_interval = "15s"
 }
 
+// HTTP health-check probes via the built-in blackbox exporter.
+// Emits probe_success (1/0), probe_duration_seconds, probe_http_status_code, etc.
+// http_2xx_auth adds a Bearer token (from ZINO_DOWNLOADER_TOKEN in .env) for the downloader.
+prometheus.exporter.blackbox "health" {
+  config = "modules:\n" +
+           "  http_2xx:\n" +
+           "    prober: http\n" +
+           "    timeout: 5s\n" +
+           "    http:\n" +
+           "      preferred_ip_protocol: ip4\n" +
+           "  http_2xx_auth:\n" +
+           "    prober: http\n" +
+           "    timeout: 5s\n" +
+           "    http:\n" +
+           "      preferred_ip_protocol: ip4\n" +
+           "      authorization:\n" +
+           "        type: Bearer\n" +
+           "        credentials: " + env("ZINO_DOWNLOADER_TOKEN") + "\n"
+
+  target {
+    name    = "zinohub"
+    address = "http://192.168.0.33:7042/health"
+    module  = "http_2xx"
+  }
+
+  target {
+    name    = "webhook-broker"
+    address = "http://192.168.2.10:8081/health"
+    module  = "http_2xx"
+  }
+
+  target {
+    name    = "zino-downloader"
+    address = "http://192.168.2.10:8082/health"
+    module  = "http_2xx_auth"
+  }
+}
+
+prometheus.scrape "health_checks" {
+  targets         = prometheus.exporter.blackbox.health.targets
+  forward_to      = [prometheus.remote_write.default.receiver]
+  scrape_interval = "15s"
+}
+
 // Host and container logs
 
 // Docker container logs

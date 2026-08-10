@@ -5,6 +5,7 @@ services:
     hostname: monitoring.palvir.dev
     environment:
       - NEW_RELIC_LICENSE_KEY=${NEW_RELIC_LICENSE_KEY}
+      - ZINO_DOWNLOADER_TOKEN=${ZINO_DOWNLOADER_TOKEN}
     command:
       - "run"
       - "--storage.path=/var/lib/alloy/data"
