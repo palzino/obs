@@ -321,22 +321,13 @@ prometheus.scrape "qbittorrent" {
 
 // HTTP health-check probes via the built-in blackbox exporter.
 // Emits probe_success (1/0), probe_duration_seconds, probe_http_status_code, etc.
-// http_2xx_auth adds a Bearer token (from ZINO_DOWNLOADER_TOKEN in .env) for the downloader.
 prometheus.exporter.blackbox "health" {
   config = "modules:\n" +
            "  http_2xx:\n" +
            "    prober: http\n" +
            "    timeout: 5s\n" +
            "    http:\n" +
-           "      preferred_ip_protocol: ip4\n" +
-           "  http_2xx_auth:\n" +
-           "    prober: http\n" +
-           "    timeout: 5s\n" +
-           "    http:\n" +
-           "      preferred_ip_protocol: ip4\n" +
-           "      authorization:\n" +
-           "        type: Bearer\n" +
-           "        credentials: " + env("ZINO_DOWNLOADER_TOKEN") + "\n"
+           "      preferred_ip_protocol: ip4\n"
 
   target {
     name    = "zinohub"
@@ -352,8 +343,8 @@ prometheus.exporter.blackbox "health" {
 
   target {
     name    = "zino-downloader"
-    address = "http://192.168.2.10:8082/health"
-    module  = "http_2xx_auth"
+    address = "http://192.168.2.10:8082/healthz"
+    module  = "http_2xx"
   }
 }
 
