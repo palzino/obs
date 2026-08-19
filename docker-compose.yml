@@ -207,7 +207,8 @@ services:
       - GRAFANA_SERVICE_ACCOUNT_TOKEN=${MCP_GRAF_TOKEN2}
       - GRAFANA_ORG_ID=1
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8000/healthz"]
+      # Image is debian-slim: no wget/curl. Bash /dev/tcp is the Grafana-recommended probe.
+      test: ["CMD", "bash", "-c", "echo >/dev/tcp/127.0.0.1/8000"]
       interval: 30s
       timeout: 5s
       retries: 3
