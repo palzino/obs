@@ -1,4 +1,5 @@
 .env
+telegram-agent/node_modules
 loki/data
 alloy/data
 tempo/data

@@ -47,6 +47,8 @@ The active runtime configuration currently covers:
 - `4319` - Alloy OTLP HTTP (metrics, traces, logs)
 - `9090` - Prometheus UI & API
 - `12345` - Alloy UI & Metrics
+- `8000` - Grafana MCP
+- `8081` - Telegram Grafana agent health
 
 ### Exporters
 - `9113` - Nginx Prometheus Exporter
