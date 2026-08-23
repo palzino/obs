@@ -44,5 +44,5 @@ export const loadConfig = (): Config => ({
   grafanaMcpUrl: process.env.GRAFANA_MCP_URL?.trim() || "http://mcp-grafana:8000/mcp",
   healthPort: Number(process.env.HEALTH_PORT || "8080"),
   agentTimeoutMs: Number(process.env.AGENT_TIMEOUT_MS || "90000"),
-  maxAgentSteps: Number(process.env.AGENT_MAX_STEPS || "8"),
+  maxAgentSteps: Number(process.env.AGENT_MAX_STEPS || "12"),
 });
