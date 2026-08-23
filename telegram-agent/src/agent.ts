@@ -5,7 +5,9 @@ import {
   type StateAccessor,
 } from "@openrouter/agent";
 import { createMCPTools, type MCPToolsHandle } from "@openrouter/mcp";
+import { SpanStatusCode, type Span } from "@opentelemetry/api";
 import type { Config } from "./config.ts";
+import { askDuration, endSpanErr, endSpanOk, tokenCounter, tracer } from "./otel.ts";
 
 const SYSTEM_PROMPT = `You are the obs Telegram agent for a homelab observability stack.
 
@@ -24,12 +26,11 @@ When the user pastes a Grafana / Telegram alert:
 6. Loki only after you have a confirmed service_name. Check labels first.
 7. Tempo via proxied tools (tempo_traceql-search, tempo_get-trace) after you have a service_name or trace_id. Do not start with Tempo health.
 
-download-webhook-api (alert "Download webhook failures"):
-- Dashboard UID zinohub-downloading
-- Failures: sum(increase(webhook_queue_operations_total{service_name="download-webhook-api", queue_operation=~"retry|drop_max_retries|create_request_failed", queue_operation_success="false"}[10m]))
-- Queue: sum(webhook_queue_size{service_name="download-webhook-api"})
-- Acks: webhook_ack_total{service_name="download-webhook-api"}
-- Label is service_name, not job="webhook". Production is this series; there is no instance="production" job.
+Named services (do not use obs-overview for these):
+- "webhook broker" / download-webhook-api: HTTP health is probe_success{job="integrations/blackbox/webhook-broker"} (1=up). Target http://192.168.2.10:8081/health. App board zinohub-downloading. Failures: sum(increase(webhook_queue_operations_total{service_name="download-webhook-api", queue_operation=~"retry|drop_max_retries|create_request_failed", queue_operation_success="false"}[10m])). Queue: sum(webhook_queue_size{service_name="download-webhook-api"}). Acks: webhook_ack_total{service_name="download-webhook-api"}. Label is service_name, not job="webhook".
+- zinohub HTTP: probe_success{job="integrations/blackbox/zinohub"}
+- zino-downloader HTTP: probe_success{job="integrations/blackbox/zino-downloader"}
+- Other blackbox jobs: integrations/blackbox/<name>. search_dashboards("webhook") is empty; search download or zinohub.
 
 When asked about Linux servers:
 1. up{job="prometheus.scrape.node_exporter"}
@@ -115,27 +116,110 @@ export class GrafanaAgent {
       throw new Error("grafana mcp is not connected");
     }
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => {
-      controller.abort(new Error("agent timed out"));
-    }, this.config.agentTimeoutMs);
+    return tracer.startActiveSpan(
+      `invoke_agent ${this.config.openRouterModel}`,
+      {
+        attributes: {
+          "gen_ai.operation.name": "invoke_agent",
+          "gen_ai.provider.name": "openrouter",
+          "gen_ai.request.model": this.config.openRouterModel,
+          "gen_ai.agent.name": "obs-telegram-agent",
+        },
+      },
+      async (span) => {
+        const started = performance.now();
+        const controller = new AbortController();
+        const timer = setTimeout(() => {
+          controller.abort(new Error("agent timed out"));
+        }, this.config.agentTimeoutMs);
+        const toolSpans: Span[] = [];
 
-    try {
-      const result = this.client.callModel({
-        model: this.config.openRouterModel,
-        instructions: SYSTEM_PROMPT,
-        input: text,
-        tools: this.mcp.tools,
-        stopWhen: stepCountIs(this.config.maxAgentSteps),
-        doomLoop: true,
-        state: stateFor(chatId),
-        signal: controller.signal,
-      });
-      const reply = (await result.getText()).trim();
-      return reply || "Grafana returned no text. Try a more specific host or metric.";
-    } finally {
-      clearTimeout(timer);
-    }
+        try {
+          const result = this.client.callModel({
+            model: this.config.openRouterModel,
+            instructions: SYSTEM_PROMPT,
+            input: text,
+            tools: this.mcp!.tools,
+            stopWhen: stepCountIs(this.config.maxAgentSteps),
+            doomLoop: true,
+            state: stateFor(chatId),
+            signal: controller.signal,
+            hooks: {
+              PreToolUse: [
+                {
+                  handler: (payload) => {
+                    const toolSpan = tracer.startSpan(`execute_tool ${payload.toolName}`, {
+                      attributes: {
+                        "gen_ai.operation.name": "execute_tool",
+                        "gen_ai.tool.name": payload.toolName,
+                      },
+                    });
+                    toolSpans.push(toolSpan);
+                  },
+                },
+              ],
+              PostToolUse: [
+                {
+                  handler: () => {
+                    const toolSpan = toolSpans.pop();
+                    if (toolSpan) {
+                      toolSpan.setStatus({ code: SpanStatusCode.OK });
+                      endSpanOk(toolSpan);
+                    }
+                  },
+                },
+              ],
+              PostToolUseFailure: [
+                {
+                  handler: (payload) => {
+                    const toolSpan = toolSpans.pop();
+                    if (toolSpan) {
+                      endSpanErr(toolSpan, payload.error);
+                    }
+                  },
+                },
+              ],
+            },
+          });
+          const reply = (await result.getText()).trim();
+          const usage = await result.getUsage();
+          if (usage.inputTokens) {
+            tokenCounter.add(usage.inputTokens, {
+              "gen_ai.provider.name": "openrouter",
+              "gen_ai.token.type": "input",
+              "gen_ai.operation.name": "invoke_agent",
+            });
+            span.setAttribute("gen_ai.usage.input_tokens", usage.inputTokens);
+          }
+          if (usage.outputTokens) {
+            tokenCounter.add(usage.outputTokens, {
+              "gen_ai.provider.name": "openrouter",
+              "gen_ai.token.type": "output",
+              "gen_ai.operation.name": "invoke_agent",
+            });
+            span.setAttribute("gen_ai.usage.output_tokens", usage.outputTokens);
+          }
+          span.setStatus({ code: SpanStatusCode.OK });
+          return reply || "Grafana returned no text. Try a more specific host or metric.";
+        } catch (error) {
+          span.recordException(error instanceof Error ? error : new Error(String(error)));
+          span.setStatus({
+            code: SpanStatusCode.ERROR,
+            message: error instanceof Error ? error.message : String(error),
+          });
+          throw error;
+        } finally {
+          for (const leftover of toolSpans) {
+            leftover.end();
+          }
+          askDuration.record((performance.now() - started) / 1000, {
+            "gen_ai.provider.name": "openrouter",
+          });
+          clearTimeout(timer);
+          span.end();
+        }
+      },
+    );
   }
 
   async close(): Promise<void> {

@@ -1,6 +1,8 @@
+import { SpanStatusCode } from "@opentelemetry/api";
 import { Bot, type Context } from "grammy";
 import type { GrafanaAgent } from "./agent.ts";
 import type { Config } from "./config.ts";
+import { messageCounter, tracer } from "./otel.ts";
 
 const TELEGRAM_LIMIT = 4000;
 
@@ -86,18 +88,34 @@ export const startTelegram = (config: Config, agent: GrafanaAgent): Bot => {
     const typing = new AbortController();
     keepTyping(ctx, typing.signal);
 
-    try {
-      const reply = await agent.ask(ctx.chat.id, ctx.message.text);
-      for (const chunk of splitTelegramText(reply)) {
-        await ctx.reply(chunk);
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "unknown error";
-      await ctx.reply(`Agent failed: ${message}`);
-    } finally {
-      typing.abort();
-      busy.delete(ctx.chat.id);
-    }
+    await tracer.startActiveSpan(
+      "telegram.handle_message",
+      {
+        attributes: {
+          "telegram.chat.id": String(ctx.chat.id),
+        },
+      },
+      async (span) => {
+        try {
+          const reply = await agent.ask(ctx.chat.id, ctx.message.text);
+          for (const chunk of splitTelegramText(reply)) {
+            await ctx.reply(chunk);
+          }
+          messageCounter.add(1, { outcome: "success" });
+          span.setStatus({ code: SpanStatusCode.OK });
+        } catch (error) {
+          messageCounter.add(1, { outcome: "error" });
+          const message = error instanceof Error ? error.message : "unknown error";
+          span.recordException(error instanceof Error ? error : new Error(message));
+          span.setStatus({ code: SpanStatusCode.ERROR, message });
+          await ctx.reply(`Agent failed: ${message}`);
+        } finally {
+          typing.abort();
+          busy.delete(ctx.chat.id);
+          span.end();
+        }
+      },
+    );
   });
 
   return bot;

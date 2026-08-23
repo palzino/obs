@@ -21,7 +21,9 @@ TELEGRAM_ALLOWED_CHAT_IDS=123456789
 TELEGRAM_AGENT_VERSION=:latest
 ```
 
-Optional: `GRAFANA_MCP_URL` (default `http://mcp-grafana:8000/mcp`), `AGENT_MAX_STEPS` (default `8`), `AGENT_TIMEOUT_MS` (default `90000`).
+Optional: `GRAFANA_MCP_URL` (default `http://mcp-grafana:8000/mcp`), `AGENT_MAX_STEPS` (default `12`), `AGENT_TIMEOUT_MS` (default `90000`).
+
+OTel (OTLP HTTP → Alloy `:4319`): traces (`invoke_agent`, `execute_tool {name}`, `telegram.handle_message`) and metrics. Prompt text is not recorded. Disable with `OTEL_SDK_DISABLED=true`.
 
 ## 3. Build and push the image (~3 min)
 

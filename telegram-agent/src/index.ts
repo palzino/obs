@@ -1,7 +1,9 @@
 import { GrafanaAgent } from "./agent.ts";
 import { loadConfig } from "./config.ts";
+import { startOtel } from "./otel.ts";
 import { startTelegram } from "./telegram.ts";
 
+const otel = await startOtel();
 const config = loadConfig();
 const agent = new GrafanaAgent(config);
 const bot = startTelegram(config, agent);
@@ -21,6 +23,7 @@ const server = Bun.serve({
 const shutdown = async (signal: string) => {
   console.log(`shutting down on ${signal}`);
   await bot.stop();
+  await otel?.shutdown();
 };
 
 process.on("SIGINT", () => void shutdown("SIGINT"));
@@ -40,3 +43,4 @@ await bot.start({
 ready = false;
 server.stop();
 await agent.close();
+await otel?.shutdown();

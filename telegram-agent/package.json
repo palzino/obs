@@ -11,6 +11,14 @@
   "dependencies": {
     "@openrouter/agent": "0.9.0",
     "@openrouter/mcp": "1.0.0",
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.221.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.221.0",
+    "@opentelemetry/resources": "^2.10.0",
+    "@opentelemetry/sdk-metrics": "^2.10.0",
+    "@opentelemetry/sdk-node": "^0.221.0",
+    "@opentelemetry/sdk-trace-base": "^2.10.0",
+    "@opentelemetry/semantic-conventions": "^1.43.0",
     "grammy": "^1.45.1"
   },
   "devDependencies": {
