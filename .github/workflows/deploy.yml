@@ -56,11 +56,12 @@ jobs:
         if: steps.changed.outputs.changed_count != '0'
         env:
           ZINO_DEPLOY_TOKEN: ${{ secrets.ZINO_DEPLOY_TOKEN }}
+          ZINO_DEPLOY_URL: ${{ secrets.ZINO_DEPLOY_URL }}
           CHANGED_JSON: ${{ steps.changed.outputs.changed_json }}
         run: |
           set -eu
 
-          curl -fsS -X POST https://marketplays.co.uk/webhooks/gitea \
+          curl -fsS -X POST ${ZINO_DEPLOY_URL} \
             -H "Authorization: Bearer ${ZINO_DEPLOY_TOKEN}" \
             -H "Content-Type: application/json" \
             -d @- <<JSON
