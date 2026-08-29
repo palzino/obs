@@ -214,11 +214,6 @@ prometheus.scrape "node_exporter" {
       instance       = "proxmox",
     },
     {
-      __address__    = "192.168.0.38:9100",
-      instance       = "wg",
-      proxmox_guest  = "wireguard",
-    },
-    {
       __address__    = "192.168.1.246:9100",
       instance       = "nginx",
       proxmox_guest  = "ng-alpine",

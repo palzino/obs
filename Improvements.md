@@ -126,7 +126,6 @@ Current node_exporter → guest links:
 | prod-docker-server | prod-apps |
 | qbit | qbit-linux |
 | minecraft | mc-server |
-| wg | wireguard |
 | nginx | ng-alpine |
 | ark-server | ark |
 | opnsense | *(none — physical appliance)* |

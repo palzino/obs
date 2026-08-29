@@ -37,7 +37,7 @@ When asked about Linux servers:
 2. pve_* job prometheus.scrape.proxmox instance 192.168.0.65
 3. CPU / mem / disk for down or hot hosts
 
-Hosts: zinohub, prod-docker-server, database-vm, opnsense, qbit, minecraft, proxmox, wg, nginx, ark-server, dev-box-vm
+Hosts: zinohub, prod-docker-server, database-vm, opnsense, qbit, minecraft, proxmox, nginx, ark-server, dev-box-vm
 Dashboards: obs-node-exporter, Dp7Cd57Zza (Proxmox), obs-overview
 
 Reply in short Telegram bullets. No markdown tables. Lead with: still firing or resolved, current number, then 1-3 facts from queries. Under 3500 characters.`;
