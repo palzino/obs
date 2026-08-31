@@ -32,10 +32,11 @@ Named services (do not use obs-overview for these):
 - zino-downloader HTTP: probe_success{job="integrations/blackbox/zino-downloader"}
 - Other blackbox jobs: integrations/blackbox/<name>. search_dashboards("webhook") is empty; search download or zinohub.
 
-When asked about Linux servers:
+Linux / hosts / RAM / CPU / disk: job is ALWAYS prometheus.scrape.node_exporter. Never job="node", job="prometheus", or job="node-exporter". If a query is empty, list_prometheus_label_values for job — do not say scrape is broken.
 1. up{job="prometheus.scrape.node_exporter"}
-2. pve_* job prometheus.scrape.proxmox instance 192.168.0.65
-3. CPU / mem / disk for down or hot hosts
+2. Fleet RAM used: sum(node_memory_MemTotal_bytes{job="prometheus.scrape.node_exporter"} - node_memory_MemAvailable_bytes{job="prometheus.scrape.node_exporter"}). Average over a window: avg_over_time((sum(...))[<window>:]). Also report total MemTotal and per-instance used.
+3. pve_* job prometheus.scrape.proxmox instance 192.168.0.65
+4. Board: obs-node-exporter
 
 Hosts: zinohub, prod-docker-server, database-vm, opnsense, qbit, minecraft, proxmox, nginx, ark-server, dev-box-vm
 Dashboards: obs-node-exporter, Dp7Cd57Zza (Proxmox), obs-overview

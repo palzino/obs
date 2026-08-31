@@ -143,24 +143,6 @@ prometheus.scrape "pgsql" {
   scrape_interval = "10s"
 }
 
-// Multi-target Proxmox scrape (pve-exporter /pve?target=<node-ip>)
-prometheus.scrape "proxmox" {
-  targets = [{
-    __address__      = "proxmox:9221",
-    __param_target   = "192.168.0.65",
-    instance         = "192.168.0.65",
-  }]
-
-  scrape_interval = "15s"
-  metrics_path    = "/pve"
-
-  clustering {
-    enabled = false
-  }
-
-  forward_to = [prometheus.remote_write.default.receiver]
-}
-
 prometheus.scrape "alloy" {
   targets = [{
     __address__ = "localhost:12345",
@@ -268,17 +250,6 @@ prometheus.scrape "cadvisor" {
   ]
   forward_to      = [prometheus.relabel.cadvisor.receiver]
   scrape_interval = "10s"
-}
-
-prometheus.scrape "qbittorrent" {
-  targets = [
-    {
-      __address__ = "qbittorrent-exporter:8090",
-      instance = "qbit",
-    },
-  ]
-  forward_to = [prometheus.remote_write.default.receiver]
-  scrape_interval = "15s"
 }
 
 // HTTP health-check probes via the built-in blackbox exporter.

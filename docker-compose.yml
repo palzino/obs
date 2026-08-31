@@ -62,19 +62,6 @@ services:
     networks:
       - monitoring
     restart: unless-stopped
-  proxmox:
-    image: prompve/prometheus-pve-exporter${PVE_EXPORTER_VERSION}
-    ports:
-      - "9221:9221" 
-    environment:
-      PVE_USER: ${PVE_USER}
-      PVE_PASSWORD: ${PVE_PASSWORD}
-      PVE_VERIFY_SSL: "false"
-    command: 
-      - "--web.listen-address=0.0.0.0:9221"
-      - "--no-collector.config"
-    networks:
-      - monitoring
   nginx:
     image: nginx/nginx-prometheus-exporter${NGINX_EXPORTER_VERSION}
     restart: unless-stopped
@@ -93,18 +80,18 @@ services:
       - "9187:9187"
     networks:
       - monitoring
-  qbittorrent-exporter:
-    image: ghcr.io/martabal/qbittorrent-exporter${QBITTORRENT_EXPORTER_VERSION}
-    container_name: qbittorrent-exporter
-    environment:
-      - QBITTORRENT_BASE_URL=http://192.168.2.10:8080
-      - QBITTORRENT_PASSWORD=${QBIT_PASS}
-      - QBITTORRENT_USERNAME=${QBIT_USR}
-    ports:
-      - 8090:8090
-    restart: unless-stopped
-    networks:
-      - monitoring
+  #qbittorrent-exporter:
+    #image: ghcr.io/martabal/qbittorrent-exporter${QBITTORRENT_EXPORTER_VERSION}
+    #container_name: qbittorrent-exporter
+    #environment:
+      #- QBITTORRENT_BASE_URL=http://192.168.2.10:8080
+      #- QBITTORRENT_PASSWORD=${QBIT_PASS}
+      #- QBITTORRENT_USERNAME=${QBIT_USR}
+    #ports:
+      #- 8090:8090
+    #restart: unless-stopped
+    #networks:
+      #- monitoring
   adguard:
     image: ebrianne/adguard-exporter${ADGUARD_EXPORTER_VERSION}
     restart: unless-stopped
