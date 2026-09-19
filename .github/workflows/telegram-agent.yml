@@ -5,13 +5,7 @@ on:
     paths:
       - "telegram-agent/**"
       - ".github/workflows/telegram-agent.yml"
-  push:
-    branches:
-      - master
-      - main
-    paths:
-      - "telegram-agent/**"
-      - ".github/workflows/telegram-agent.yml"
+  workflow_call:
 
 jobs:
   typecheck:

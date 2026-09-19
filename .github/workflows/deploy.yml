@@ -6,14 +6,15 @@ on:
       - master
       - main
       - feature-*
-  pull_request:
-    branches:
-      - master
-      - main
+
 jobs:
-  deploy:
+  detect:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref_name == 'master' || github.ref_name == 'main' || startsWith(github.ref_name, 'feature-'))
+    outputs:
+      telegram_agent: ${{ steps.changed.outputs.telegram_agent }}
+      docker: ${{ steps.changed.outputs.docker }}
+      changed_count: ${{ steps.changed.outputs.changed_count }}
+      changed_json: ${{ steps.changed.outputs.changed_json }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -37,27 +38,65 @@ jobs:
 
           python3 - <<'PY'
           import json
+          import os
           from pathlib import Path
 
           paths = [line.strip() for line in Path("changed.txt").read_text().splitlines() if line.strip()]
-          Path("changed.json").write_text(json.dumps(paths))
+          telegram_agent = any(
+              path == ".github/workflows/telegram-agent.yml" or path.startswith("telegram-agent/")
+              for path in paths
+          )
+          docker = any(
+              path == ".github/workflows/docker.yml" or path.startswith("telegram-agent/")
+              for path in paths
+          )
+
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a") as fh:
+              fh.write(f"changed_count={len(paths)}\n")
+              fh.write(f"telegram_agent={'true' if telegram_agent else 'false'}\n")
+              fh.write(f"docker={'true' if docker else 'false'}\n")
+              fh.write("changed_json<<CHANGED_JSON_EOF\n")
+              fh.write(json.dumps(paths) + "\n")
+              fh.write("CHANGED_JSON_EOF\n")
+
           print(f"changed_count={len(paths)}")
+          print(f"telegram_agent={telegram_agent}")
+          print(f"docker={docker}")
           PY
 
-          echo "changed_count=$(wc -l < changed.txt | tr -d ' ')" >> "$GITHUB_OUTPUT"
-          printf 'changed_json=%s\n' "$(cat changed.json)" >> "$GITHUB_OUTPUT"
+  static-checks:
+    name: Static checks
+    needs: detect
+    if: needs.detect.outputs.telegram_agent == 'true'
+    uses: ./.github/workflows/telegram-agent.yml
 
+  docker:
+    name: Docker
+    needs:
+      - detect
+      - static-checks
+    if: always() && !cancelled() && needs.detect.result == 'success' && (needs.static-checks.result == 'success' || needs.static-checks.result == 'skipped') && needs.detect.outputs.docker == 'true' && (github.ref_name == 'master' || github.ref_name == 'main')
+    uses: ./.github/workflows/docker.yml
+    secrets: inherit
 
+  deploy:
+    needs:
+      - detect
+      - static-checks
+      - docker
+    if: always() && !cancelled() && needs.detect.result == 'success' && (needs.static-checks.result == 'success' || needs.static-checks.result == 'skipped') && (needs.docker.result == 'success' || needs.docker.result == 'skipped')
+    runs-on: ubuntu-latest
+    steps:
       - name: Skip deploy when no paths changed
-        if: steps.changed.outputs.changed_count == '0'
+        if: needs.detect.outputs.changed_count == '0'
         run: echo "No changed paths found, skipping deploy trigger."
 
       - name: Trigger zino-ci
-        if: steps.changed.outputs.changed_count != '0'
+        if: needs.detect.outputs.changed_count != '0'
         env:
           ZINO_DEPLOY_TOKEN: ${{ secrets.ZINO_DEPLOY_TOKEN }}
           ZINO_DEPLOY_URL: ${{ secrets.ZINO_DEPLOY_URL }}
-          CHANGED_JSON: ${{ steps.changed.outputs.changed_json }}
+          CHANGED_JSON: ${{ needs.detect.outputs.changed_json }}
         run: |
           set -eu
 

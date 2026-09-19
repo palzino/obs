@@ -1,13 +1,7 @@
 name: Docker
 
 on:
-  push:
-    branches:
-      - master
-      - main
-    paths:
-      - "telegram-agent/**"
-      - ".github/workflows/docker.yml"
+  workflow_call:
   workflow_dispatch:
 
 jobs:
