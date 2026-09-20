@@ -1,0 +1,47 @@
+id: bad-traces
+description: Error traces use Tempo TraceQL, never PromQL
+prompt: any bad traces we need to look at
+tags: [tempo, traces, core]
+tools:
+  - name: search_tempo_traces
+    when:
+      query_includes: error
+    result:
+      traces: []
+      note: no error traces in window
+  - name: search_tempo_traces
+    result:
+      traces: []
+      note: no error traces in window
+  - name: query_prometheus
+    when:
+      expr_includes: status=error
+    result:
+      error: parse error, unexpected '='
+  - name: query_loki_logs
+    when:
+      logql_includes: "{"
+      logql_excludes: "*"
+    result:
+      count: 0
+expect:
+  tools:
+    must_call:
+      - name: search_tempo_traces
+    forbidden: []
+    max_calls: 4
+  format:
+    max_chars: 1200
+    no_markdown_tables: true
+    no_markdown_headings: true
+  content:
+    must_not_include:
+      - cannot be queried
+      - not exposed
+      - Prometheus-compatible
+      - scrape is broken
+    grounded: true
+  style:
+    no_follow_up_question: true
+    no_investigation_essay: true
+    labeled_finding: true

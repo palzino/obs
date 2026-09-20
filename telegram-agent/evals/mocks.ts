@@ -91,29 +91,29 @@ const schemas: Record<string, typeof loose> = {
   }),
   search_folders: z.object({ query: z.string().optional() }),
   get_query_examples: z.object({ datasourceType: z.string().optional() }),
-  "tempo_traceql-search": z.object({
+  search_tempo_traces: z.object({
     query: z.string().optional(),
     start: z.string().optional(),
     end: z.string().optional(),
   }),
-  "tempo_traceql-metrics-instant": z.object({
+  query_tempo_metrics: z.object({
     query: z.string().optional(),
     start: z.string().optional(),
     end: z.string().optional(),
+    type: z.string().optional(),
   }),
-  "tempo_get-trace": z.object({ trace_id: z.string().optional() }),
-  "tempo_get-attribute-names": z.object({ scope: z.string().optional() }),
-  "tempo_get-attribute-values": z.object({
-    name: z.string().optional(),
-    "filter-query": z.string().optional(),
-  }),
+  get_tempo_trace: z.object({ trace_id: z.string().optional() }),
 };
 
 const descriptions: Record<string, string> = {
   query_prometheus:
     "Run PromQL. expr is required. datasourceUid must be prometheus. Use queryType instant and endTime now unless you need a range. Never call with an empty expr.",
   query_loki_logs:
-    'Query Loki logs. datasourceUid must be loki. logql must be a stream selector like {service_name="nginx"} |= "error". Never use "*".',
+    'Query Loki logs. datasourceUid loki. logql is a stream selector plus optional | detected_level="error". Pass startRfc3339=now-24h and limit=10. Never use "*" or {detected_level="error"} as the selector.',
+  search_tempo_traces:
+    "Search traces with TraceQL. Example: { status = error }. Do not put TraceQL in query_prometheus.",
+  query_tempo_metrics: "TraceQL metrics over time.",
+  get_tempo_trace: "Fetch one trace by trace_id.",
   query_loki_stats:
     "Index-level Loki stream stats. logql must be a simple label selector, no line filters.",
   list_loki_label_names: "List Loki label names. Call this before guessing service_name.",
@@ -131,12 +131,6 @@ const descriptions: Record<string, string> = {
   check_datasources_health: "Datasource health. Use only after a query itself fails.",
   search_folders: "Search Grafana folders.",
   get_query_examples: "Example PromQL or LogQL for a datasource type.",
-  "tempo_traceql-search":
-    'Search traces. Use status=error or error=true after you have a service_name. Example: {resource.service.name="nginx" && status=error}',
-  "tempo_traceql-metrics-instant": "Instant TraceQL metrics, e.g. error rate by service.",
-  "tempo_get-trace": "Fetch one trace by trace_id.",
-  "tempo_get-attribute-names": "List Tempo attribute names. Prefer resource.service.name.",
-  "tempo_get-attribute-values": "List values for a Tempo attribute such as resource.service.name.",
 };
 
 const unmatchedResult = (name: string, input: Record<string, unknown>): unknown => {

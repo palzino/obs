@@ -51,9 +51,6 @@ expect:
           logql_includes: "{"
           logql_excludes: "*"
           datasourceUid: loki
-    must_call_any:
-      - - name: list_loki_label_names
-        - name: list_loki_label_values
   format:
     max_chars: 1200
     no_markdown_tables: true

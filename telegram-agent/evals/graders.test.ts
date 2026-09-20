@@ -257,7 +257,7 @@ const goodHealth: AgentTurn = {
       output: { count: 664, note: "664 nginx 502 Bad Gateway" },
     },
     {
-      name: "tempo_traceql-search",
+      name: "search_tempo_traces",
       input: { query: '{resource.service.name="nginx" && status=error}' },
       output: { traces: [{ service: "nginx", status: "error", count: 18 }] },
     },
@@ -562,6 +562,7 @@ test("all fixture yaml files parse", async () => {
   expect(fixtures.map((fixture) => fixture.id).toSorted()).toEqual([
     "any-error-logs",
     "api-requests-per-min",
+    "bad-traces",
     "dashboard-search-webhook",
     "empty-query-not-broken",
     "firing-alert",
@@ -580,6 +581,7 @@ test("core tag is the prompt-iteration subset", async () => {
   const fixtures = await loadFixtures(fixturesDir, undefined, "core");
   expect(fixtures.map((fixture) => fixture.id).toSorted()).toEqual([
     "api-requests-per-min",
+    "bad-traces",
     "dashboard-search-webhook",
     "linux-hosts-status",
     "most-traffic-7d",

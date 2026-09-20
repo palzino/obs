@@ -146,14 +146,14 @@ tools:
       lines:
         - 'nginx 502 Bad Gateway spotify.palzinode.co.uk upstream 192.168.1.16:3500 Connection refused'
       note: 664 error lines, all nginx 502 Bad Gateway
-  - name: tempo_traceql-search
+  - name: search_tempo_traces
     when:
       query_includes: error
     result:
       traces:
         - { service: nginx, status: error, count: 18, message: "502 upstream connection refused" }
       note: 18 error traces for nginx
-  - name: tempo_traceql-metrics-instant
+  - name: query_tempo_metrics
     when:
       query_includes: error
     result:
@@ -208,9 +208,9 @@ expect:
           args:
             logql_includes: "{"
             logql_excludes: "*"
-      - - name: tempo_traceql-search
-        - name: tempo_traceql-metrics-instant
-        - name: tempo_get-trace
+      - - name: search_tempo_traces
+        - name: query_tempo_metrics
+        - name: get_tempo_trace
   format:
     max_chars: 1200
     no_markdown_tables: true
