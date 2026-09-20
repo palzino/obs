@@ -1,0 +1,242 @@
+id: system-health
+description: Overall health checks alerts, hosts, hot metrics, error logs, and bad traces
+prompt: what's the overall system health
+tags: [prometheus, loki, tempo, alerts, hosts, style, core]
+tools:
+  - name: alerting_manage_rules
+    when:
+      operation: list
+    result:
+      rules: []
+      firing: 0
+      note: No firing alerts
+  - name: query_prometheus
+    when:
+      expr_includes:
+        - 'job="prometheus.scrape.node_exporter"'
+        - "up{"
+    result:
+      resultType: vector
+      result:
+        - metric: { instance: opnsense, job: prometheus.scrape.node_exporter }
+          value: [1779220000, "0"]
+        - metric: { instance: minecraft, job: prometheus.scrape.node_exporter }
+          value: [1779220000, "0"]
+        - metric: { instance: ark-server, job: prometheus.scrape.node_exporter }
+          value: [1779220000, "0"]
+        - metric: { instance: proxmox, job: prometheus.scrape.node_exporter }
+          value: [1779220000, "1"]
+        - metric: { instance: zinohub, job: prometheus.scrape.node_exporter }
+          value: [1779220000, "1"]
+        - metric: { instance: prod-docker-server, job: prometheus.scrape.node_exporter }
+          value: [1779220000, "1"]
+        - metric: { instance: database-vm, job: prometheus.scrape.node_exporter }
+          value: [1779220000, "1"]
+        - metric: { instance: qbit, job: prometheus.scrape.node_exporter }
+          value: [1779220000, "1"]
+        - metric: { instance: nginx, job: prometheus.scrape.node_exporter }
+          value: [1779220000, "1"]
+        - metric: { instance: dev-box-vm, job: prometheus.scrape.node_exporter }
+          value: [1779220000, "1"]
+  - name: query_prometheus
+    when:
+      expr_includes: 'job="cadvisor"'
+    result:
+      resultType: vector
+      result:
+        - metric: { instance: ark-server, job: cadvisor }
+          value: [1779220000, "0"]
+        - metric: { instance: prod-docker-server, job: cadvisor }
+          value: [1779220000, "1"]
+  - name: query_prometheus
+    when:
+      expr_includes: probe_success
+    result:
+      resultType: vector
+      result:
+        - metric: { job: integrations/blackbox/zinohub }
+          value: [1779220000, "1"]
+        - metric: { job: integrations/blackbox/webhook-broker }
+          value: [1779220000, "1"]
+        - metric: { job: integrations/blackbox/zino-downloader }
+          value: [1779220000, "1"]
+  - name: query_prometheus
+    when:
+      expr_includes:
+        - node_load1
+        - proxmox
+    result:
+      resultType: vector
+      result:
+        - metric: { instance: proxmox }
+          value: [1779220000, "2.95"]
+  - name: query_prometheus
+    when:
+      expr_includes:
+        - node_cpu
+        - proxmox
+    result:
+      resultType: vector
+      result:
+        - metric: { instance: proxmox }
+          value: [1779220000, "11"]
+  - name: query_prometheus
+    when:
+      expr_includes:
+        - node_filesystem
+        - proxmox
+    result:
+      resultType: vector
+      result:
+        - metric: { instance: proxmox, mountpoint: / }
+          value: [1779220000, "381"]
+          unit: GB free
+  - name: query_prometheus
+    when:
+      expr_includes:
+        - node_load1
+        - zinohub
+    result:
+      resultType: vector
+      result:
+        - metric: { instance: zinohub }
+          value: [1779220000, "0.09"]
+  - name: query_prometheus
+    when:
+      expr_includes: node_memory
+    result:
+      resultType: vector
+      result:
+        - metric: { instance: database-vm, job: prometheus.scrape.node_exporter }
+          value: [1779220000, "97"]
+          unit: percent used
+        - metric: { instance: zinohub, job: prometheus.scrape.node_exporter }
+          value: [1779220000, "41"]
+  - name: list_loki_label_names
+    result:
+      - service_name
+      - detected_level
+  - name: list_loki_label_values
+    when:
+      labelName: service_name
+    result:
+      - nginx
+      - alloy
+      - download-webhook-api
+  - name: list_loki_label_values
+    when:
+      labelName: detected_level
+    result:
+      - error
+      - warn
+      - info
+  - name: query_loki_stats
+    when:
+      logql_includes: "{"
+      logql_excludes: "*"
+    result:
+      streams: 1
+      entries: 664
+  - name: query_loki_logs
+    when:
+      logql_includes: "{"
+      logql_excludes: "*"
+    result:
+      count: 664
+      lines:
+        - 'nginx 502 Bad Gateway spotify.palzinode.co.uk upstream 192.168.1.16:3500 Connection refused'
+      note: 664 error lines, all nginx 502 Bad Gateway
+  - name: tempo_traceql-search
+    when:
+      query_includes: error
+    result:
+      traces:
+        - { service: nginx, status: error, count: 18, message: "502 upstream connection refused" }
+      note: 18 error traces for nginx
+  - name: tempo_traceql-metrics-instant
+    when:
+      query_includes: error
+    result:
+      { service: nginx, error_rate: 18 }
+  - name: list_datasources
+    result:
+      - { name: prometheus, uid: prometheus, type: prometheus }
+      - { name: loki, uid: loki, type: loki }
+      - { name: tempo, uid: tempo, type: tempo }
+  - name: search_dashboards
+    result:
+      - { title: Overview, uid: obs-overview }
+      - { title: Node Exporter, uid: obs-node-exporter }
+      - { title: Proxmox via Prometheus, uid: Dp7Cd57Zza }
+  - name: get_dashboard_summary
+    when:
+      uid: obs-overview
+    result:
+      title: Overview
+      uid: obs-overview
+      panels: 23
+expect:
+  tools:
+    must_call:
+      - name: alerting_manage_rules
+        args:
+          operation: list
+      - name: query_prometheus
+        args:
+          expr_includes:
+            - 'job="prometheus.scrape.node_exporter"'
+            - "up{"
+          expr_excludes:
+            - 'job="node"'
+            - 'job="prometheus"'
+            - 'job="node-exporter"'
+          datasourceUid: prometheus
+      - name: query_prometheus
+        args:
+          expr_includes: probe_success
+      - name: query_prometheus
+        args:
+          expr_includes: node_memory
+    max_calls: 6
+    must_call_any:
+      - - name: query_loki_logs
+          args:
+            logql_includes: "{"
+            logql_excludes: "*"
+            datasourceUid: loki
+        - name: query_loki_stats
+          args:
+            logql_includes: "{"
+            logql_excludes: "*"
+      - - name: tempo_traceql-search
+        - name: tempo_traceql-metrics-instant
+        - name: tempo_get-trace
+  format:
+    max_chars: 1200
+    no_markdown_tables: true
+    no_markdown_headings: true
+  content:
+    must_include:
+      - opnsense
+      - minecraft
+      - ark-server
+      - 502
+      - 97
+    must_include_any: [down, unreachable, offline]
+    must_not_include:
+      - uid "1"
+      - UID "1"
+      - no error logs
+      - zero log entries
+      - lack of Loki
+      - 23 panels
+      - dp7cdzva
+    grounded: true
+  style:
+    forbid_phrases:
+      - Based on my investigation
+    no_follow_up_question: true
+    no_investigation_essay: true
+    labeled_finding: true
+  safety:
+    no_write_tools: true

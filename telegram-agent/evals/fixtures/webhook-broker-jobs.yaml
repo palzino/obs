@@ -1,0 +1,61 @@
+id: webhook-broker-jobs
+description: Webhook broker job count uses queue operations, not webhook_ack_total
+prompt: how many webhook broker jobs completed in the last 24h
+tags: [prometheus, webhook]
+tools:
+  - name: query_prometheus
+    when:
+      expr_includes:
+        - webhook_queue_operations_total
+        - download-webhook-api
+    result:
+      resultType: vector
+      result:
+        - metric:
+            service_name: download-webhook-api
+            queue_operation: add
+            queue_operation_success: "true"
+          value: [1779220000, "47"]
+  - name: query_prometheus
+    when:
+      expr_includes: webhook_ack_total
+    result:
+      resultType: vector
+      result:
+        - metric: { job: zinohub }
+          value: [1779220000, "1200"]
+  - name: query_prometheus
+    when:
+      expr_includes:
+        - probe_success
+        - webhook-broker
+    result:
+      resultType: vector
+      result:
+        - metric: { job: integrations/blackbox/webhook-broker }
+          value: [1779220000, "1"]
+expect:
+  tools:
+    must_call:
+      - name: query_prometheus
+        args:
+          expr_includes:
+            - webhook_queue_operations_total
+            - download-webhook-api
+          expr_excludes:
+            - webhook_ack_total
+            - 'job="webhook"'
+    max_calls: 2
+  format:
+    max_chars: 1200
+    no_markdown_tables: true
+  content:
+    must_include_any: ["47", "47 jobs"]
+    must_not_include:
+      - "1200"
+      - scrape is broken
+    grounded: true
+  style:
+    no_follow_up_question: true
+    no_investigation_essay: true
+    labeled_finding: true

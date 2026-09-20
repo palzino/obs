@@ -1,0 +1,206 @@
+id: api-requests-per-min
+description: Ambiguous API req/min — discover app HTTP counters, rate*60, ignore Prometheus scrape
+prompt: how many api requests been made per min?
+tags: [prometheus, http, ambiguous, core]
+tools:
+  - name: list_prometheus_metric_names
+    result:
+      - nginx_http_requests_total
+      - prometheus_http_requests_total
+      - webhook_http_requests_total
+      - xdownloader_http_requests_total
+      - zino_ops_http_requests_total
+      - http_server_request_duration_seconds_count
+  - name: search_dashboards
+    when:
+      query_includes: nginx
+    result:
+      - { title: NGINX, uid: obs-nginx }
+  - name: search_dashboards
+    when:
+      query_includes: zinohub
+    result:
+      - { title: ZinoHub - Application Metrics, uid: zinohub-metrics }
+  - name: search_dashboards
+    result: []
+  - name: get_dashboard_panel_queries
+    when:
+      uid: obs-nginx
+    result:
+      - title: HTTP requests rate
+        query: sum(rate(nginx_http_requests_total{instance=~"$instance"}[5m]))
+  - name: get_dashboard_panel_queries
+    when:
+      uid: zinohub-metrics
+    result:
+      - title: HTTP Requests/sec
+        query: sum(rate(http_server_request_duration_seconds_count{service_name="zinohub"}[$__rate_interval]))
+  - name: query_prometheus
+    when:
+      expr_includes: prometheus_http_requests_total
+    result:
+      resultType: vector
+      result:
+        - metric: { job: prometheus }
+          value: [1779220000, "57.1"]
+      note: Prometheus scraping itself, not an app API
+  - name: query_prometheus
+    when:
+      expr_includes: nginx_http_requests_total
+      expr_matches: '\*\s*60'
+    result:
+      resultType: vector
+      result:
+        - metric: { instance: "nginx:9113", job: prometheus.scrape.nginx }
+          value: [1779220000, "17.8"]
+      note: 17.8 req/min from rate[5m]*60
+  - name: query_prometheus
+    when:
+      expr_includes:
+        - nginx_http_requests_total
+        - increase(
+    result:
+      resultType: vector
+      result:
+        - metric: { job: prometheus.scrape.nginx }
+          value: [1779220000, "18"]
+      note: 18 req in the last 1m
+  - name: query_prometheus
+    when:
+      expr_includes:
+        - nginx_http_requests_total
+        - rate(
+    result:
+      resultType: vector
+      result:
+        - metric: { job: prometheus.scrape.nginx }
+          value: [1779220000, "0.297"]
+      note: 0.297 req/s (rate[5m] without *60)
+  - name: query_prometheus
+    when:
+      expr_includes: nginx_http_requests_total
+    result:
+      resultType: vector
+      result:
+        - metric: { job: prometheus.scrape.nginx }
+          value: [1779220000, "1842911"]
+      note: raw counter, not a rate
+  - name: query_prometheus
+    when:
+      expr_includes: webhook_http_requests_total
+      expr_matches: '\*\s*60'
+    result:
+      resultType: vector
+      result:
+        - metric: { service_name: download-webhook-api, http_request_method: GET, http_response_status_code: "200" }
+          value: [1779220000, "4"]
+      note: 4 req/min download-webhook-api
+  - name: query_prometheus
+    when:
+      expr_includes:
+        - webhook_http_requests_total
+        - increase(
+    result:
+      resultType: vector
+      result:
+        - metric: { service_name: download-webhook-api }
+          value: [1779220000, "4"]
+  - name: query_prometheus
+    when:
+      expr_includes:
+        - webhook_http_requests_total
+        - rate(
+    result:
+      resultType: vector
+      result:
+        - metric: { service_name: download-webhook-api }
+          value: [1779220000, "0.067"]
+      note: 0.067 req/s without *60
+  - name: query_prometheus
+    when:
+      expr_includes: http_server_request_duration_seconds_count
+      expr_matches: '\*\s*60'
+    result:
+      resultType: vector
+      result:
+        - metric: { service_name: zinohub }
+          value: [1779220000, "4.84"]
+        - metric: { service_name: zino-ci }
+          value: [1779220000, "0"]
+        - metric: {}
+          value: [1779220000, "30.9"]
+      note: 4.84 req/min zinohub. Unlabeled 30.9 is not a named app API.
+  - name: query_prometheus
+    when:
+      expr_includes:
+        - http_server_request_duration_seconds_count
+        - rate(
+    result:
+      resultType: vector
+      result:
+        - metric: { service_name: zinohub }
+          value: [1779220000, "0.081"]
+      note: zinohub 0.081 req/s without *60
+  - name: query_prometheus
+    when:
+      expr_includes: zino_ops_http_requests_total
+    result:
+      resultType: vector
+      result:
+        - metric: { service_name: zino-downloader }
+          value: [1779220000, "0"]
+expect:
+  tools:
+    must_call_any:
+      - - name: query_prometheus
+          args:
+            expr_includes: nginx_http_requests_total
+            expr_matches: 'rate\(|irate\(|increase\('
+            expr_excludes: prometheus_http_requests_total
+        - name: query_prometheus
+          args:
+            expr_includes: webhook_http_requests_total
+            expr_matches: 'rate\(|irate\(|increase\('
+        - name: query_prometheus
+          args:
+            expr_includes: http_server_request_duration_seconds_count
+            expr_matches: 'rate\(|irate\(|increase\('
+    max_calls: 4
+  format:
+    max_chars: 1200
+    no_markdown_tables: true
+    no_markdown_headings: true
+  content:
+    must_include_any: [nginx, zinohub, webhook, download-webhook]
+    must_not_include:
+      - "57.1"
+      - scrape is broken
+      - no dashboard
+      - prometheus_http
+    grounded: true
+  style:
+    no_follow_up_question: true
+    no_investigation_essay: true
+    labeled_finding: true
+  quality:
+    - id: discovered_metrics
+      points: 2
+      tools:
+        must_call_any:
+          - - name: list_prometheus_metric_names
+            - name: search_dashboards
+            - name: get_dashboard_panel_queries
+    - id: per_minute_query
+      points: 2
+      tools:
+        must_call_any:
+          - - name: query_prometheus
+              args:
+                expr_matches: '\*\s*60'
+            - name: query_prometheus
+              args:
+                expr_includes: ["increase(", "[1m]"]
+    - id: units
+      points: 1
+      content:
+        must_include_any: ["/min", "per min", "per minute", "req/min"]

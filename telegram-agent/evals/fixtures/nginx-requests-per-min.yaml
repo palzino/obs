@@ -1,0 +1,112 @@
+id: nginx-requests-per-min
+description: Named nginx request rate — rate*60, not Prometheus scrape or raw counter
+prompt: how many nginx requests per min?
+tags: [prometheus, http, nginx]
+tools:
+  - name: list_prometheus_metric_names
+    result:
+      - nginx_http_requests_total
+      - prometheus_http_requests_total
+      - webhook_http_requests_total
+  - name: search_dashboards
+    when:
+      query_includes: nginx
+    result:
+      - { title: NGINX, uid: obs-nginx }
+  - name: search_dashboards
+    result: []
+  - name: get_dashboard_panel_queries
+    when:
+      uid: obs-nginx
+    result:
+      - title: HTTP requests rate
+        query: sum(rate(nginx_http_requests_total{instance=~"$instance"}[5m]))
+  - name: query_prometheus
+    when:
+      expr_includes: prometheus_http_requests_total
+    result:
+      resultType: vector
+      result:
+        - metric: { job: prometheus }
+          value: [1779220000, "57.1"]
+      note: Prometheus scraping itself, not nginx
+  - name: query_prometheus
+    when:
+      expr_includes: nginx_http_requests_total
+      expr_matches: '\*\s*60'
+    result:
+      resultType: vector
+      result:
+        - metric: { instance: "nginx:9113", job: prometheus.scrape.nginx }
+          value: [1779220000, "17.8"]
+      note: 17.8 req/min from rate[5m]*60
+  - name: query_prometheus
+    when:
+      expr_includes:
+        - nginx_http_requests_total
+        - increase(
+    result:
+      resultType: vector
+      result:
+        - metric: { job: prometheus.scrape.nginx }
+          value: [1779220000, "18"]
+      note: 18 req in the last 1m
+  - name: query_prometheus
+    when:
+      expr_includes:
+        - nginx_http_requests_total
+        - rate(
+    result:
+      resultType: vector
+      result:
+        - metric: { job: prometheus.scrape.nginx }
+          value: [1779220000, "0.297"]
+      note: 0.297 req/s (rate[5m] without *60)
+  - name: query_prometheus
+    when:
+      expr_includes: nginx_http_requests_total
+    result:
+      resultType: vector
+      result:
+        - metric: { job: prometheus.scrape.nginx }
+          value: [1779220000, "1842911"]
+      note: raw counter, not a rate
+expect:
+  tools:
+    must_call:
+      - name: query_prometheus
+        args:
+          expr_includes: nginx_http_requests_total
+          expr_matches: 'rate\(|irate\(|increase\('
+          expr_excludes: prometheus_http_requests_total
+  format:
+    max_chars: 1200
+    no_markdown_tables: true
+    no_markdown_headings: true
+  content:
+    must_include_any: ["17.8", "18"]
+    must_not_include:
+      - "0.297"
+      - "57.1"
+      - "1842911"
+      - scrape is broken
+    grounded: true
+  style:
+    no_follow_up_question: true
+    no_investigation_essay: true
+    labeled_finding: true
+  quality:
+    - id: per_minute_query
+      points: 2
+      tools:
+        must_call_any:
+          - - name: query_prometheus
+              args:
+                expr_matches: '\*\s*60'
+            - name: query_prometheus
+              args:
+                expr_includes: ["increase(", "[1m]"]
+    - id: units
+      points: 1
+      content:
+        must_include_any: ["/min", "per min", "per minute", "req/min"]

@@ -1,0 +1,124 @@
+id: webhook-api-requests-per-min
+description: Named download-webhook-api request rate — webhook_http_requests_total, not nginx or Prometheus
+prompt: how many download-webhook-api requests per min?
+tags: [prometheus, http, webhook]
+tools:
+  - name: list_prometheus_metric_names
+    result:
+      - nginx_http_requests_total
+      - prometheus_http_requests_total
+      - webhook_http_requests_total
+      - zino_ops_http_requests_total
+  - name: search_dashboards
+    when:
+      query_includes: webhook
+    result: []
+  - name: search_dashboards
+    when:
+      query_includes: zinohub
+    result:
+      - { title: ZinoHub Downloading, uid: zinohub-downloading }
+  - name: search_dashboards
+    result: []
+  - name: query_prometheus
+    when:
+      expr_includes: prometheus_http_requests_total
+    result:
+      resultType: vector
+      result:
+        - metric: { job: prometheus }
+          value: [1779220000, "57.1"]
+      note: Prometheus scraping itself, not the webhook API
+  - name: query_prometheus
+    when:
+      expr_includes: nginx_http_requests_total
+      expr_matches: '\*\s*60'
+    result:
+      resultType: vector
+      result:
+        - metric: { job: prometheus.scrape.nginx }
+          value: [1779220000, "17.8"]
+  - name: query_prometheus
+    when:
+      expr_includes: webhook_http_requests_total
+      expr_matches: '\*\s*60'
+    result:
+      resultType: vector
+      result:
+        - metric: { service_name: download-webhook-api, http_request_method: GET, http_response_status_code: "200" }
+          value: [1779220000, "4"]
+      note: 4 req/min download-webhook-api GET 200
+  - name: query_prometheus
+    when:
+      expr_includes:
+        - webhook_http_requests_total
+        - increase(
+    result:
+      resultType: vector
+      result:
+        - metric: { service_name: download-webhook-api }
+          value: [1779220000, "4"]
+  - name: query_prometheus
+    when:
+      expr_includes:
+        - webhook_http_requests_total
+        - rate(
+    result:
+      resultType: vector
+      result:
+        - metric: { service_name: download-webhook-api }
+          value: [1779220000, "0.067"]
+      note: 0.067 req/s without *60
+  - name: query_prometheus
+    when:
+      expr_includes: webhook_http_requests_total
+    result:
+      resultType: vector
+      result:
+        - metric: { service_name: download-webhook-api }
+          value: [1779220000, "8820"]
+      note: raw counter, not a rate
+expect:
+  tools:
+    must_call:
+      - name: query_prometheus
+        args:
+          expr_includes: webhook_http_requests_total
+          expr_matches: 'rate\(|irate\(|increase\('
+          expr_excludes: prometheus_http_requests_total
+  format:
+    max_chars: 1200
+    no_markdown_tables: true
+    no_markdown_headings: true
+  content:
+    must_include_any: ["4"]
+    must_not_include:
+      - "17.8"
+      - "57.1"
+      - "0.067"
+      - "8820"
+      - scrape is broken
+    grounded: true
+  style:
+    no_follow_up_question: true
+    no_investigation_essay: true
+    labeled_finding: true
+  quality:
+    - id: per_minute_query
+      points: 2
+      tools:
+        must_call_any:
+          - - name: query_prometheus
+              args:
+                expr_matches: '\*\s*60'
+            - name: query_prometheus
+              args:
+                expr_includes: ["increase(", "[1m]"]
+    - id: named_service
+      points: 1
+      content:
+        must_include_any: [download-webhook, webhook]
+    - id: units
+      points: 1
+      content:
+        must_include_any: ["/min", "per min", "per minute", "req/min"]

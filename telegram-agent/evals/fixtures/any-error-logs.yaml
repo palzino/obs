@@ -1,0 +1,76 @@
+id: any-error-logs
+description: Generic "any error logs" discovers Loki labels then summarizes errors
+prompt: tell me of any error logs
+tags: [loki, style]
+tools:
+  - name: list_loki_label_names
+    result:
+      - service_name
+      - detected_level
+      - host
+  - name: list_loki_label_values
+    when:
+      labelName: service_name
+    result:
+      - nginx
+      - alloy
+      - download-webhook-api
+      - authentik
+  - name: list_loki_label_values
+    when:
+      labelName: detected_level
+    result:
+      - error
+      - warn
+      - info
+  - name: query_loki_stats
+    when:
+      logql_includes: "{"
+      logql_excludes: "*"
+    result:
+      streams: 2
+      entries: 671
+  - name: query_loki_logs
+    when:
+      logql_includes: "{"
+      logql_excludes: "*"
+    result:
+      count: 671
+      by_service:
+        nginx: 664
+        download-webhook-api: 7
+      lines:
+        - 'nginx 502 Bad Gateway spotify.palzinode.co.uk upstream 192.168.1.16:3500 Connection refused'
+        - 'download-webhook-api error create_request_failed queue drop'
+      note: 664 nginx 502s plus 7 download-webhook-api errors
+expect:
+  tools:
+    must_call:
+      - name: query_loki_logs
+        args:
+          logql_includes: "{"
+          logql_excludes: "*"
+          datasourceUid: loki
+    must_call_any:
+      - - name: list_loki_label_names
+        - name: list_loki_label_values
+  format:
+    max_chars: 1200
+    no_markdown_tables: true
+    no_markdown_headings: true
+  content:
+    must_include_any: ["502", "664"]
+    must_not_include:
+      - not functional
+      - malfunctioning
+      - not accessible
+      - syntax error
+      - Loki API is not accepting
+    grounded: true
+  style:
+    forbid_phrases:
+      - Based on my investigation
+      - Would you like me to
+    no_follow_up_question: true
+    no_investigation_essay: true
+    labeled_finding: true

@@ -1,0 +1,53 @@
+id: linux-hosts-status
+description: Fleet Linux host health uses node_exporter job label
+prompt: what's the state of my linux servers
+tags: [prometheus, hosts, core]
+tools:
+  - name: query_prometheus
+    when:
+      expr_includes: 'job="prometheus.scrape.node_exporter"'
+    result:
+      resultType: vector
+      result:
+        - metric: { instance: zinohub, job: prometheus.scrape.node_exporter }
+          value: [1779220000, "1"]
+        - metric: { instance: prod-docker-server, job: prometheus.scrape.node_exporter }
+          value: [1779220000, "1"]
+        - metric: { instance: database-vm, job: prometheus.scrape.node_exporter }
+          value: [1779220000, "1"]
+        - metric: { instance: nginx, job: prometheus.scrape.node_exporter }
+          value: [1779220000, "1"]
+        - metric: { instance: minecraft, job: prometheus.scrape.node_exporter }
+          value: [1779220000, "0"]
+  - name: list_prometheus_label_values
+    when:
+      labelName: job
+    result:
+      - prometheus.scrape.node_exporter
+      - prometheus.scrape.proxmox
+      - integrations/blackbox/webhook-broker
+expect:
+  tools:
+    must_call:
+      - name: query_prometheus
+        args:
+          expr_includes: 'job="prometheus.scrape.node_exporter"'
+          expr_excludes:
+            - 'job="node"'
+            - 'job="prometheus"'
+            - 'job="node-exporter"'
+          datasourceUid: prometheus
+    forbidden: [alerting_manage_rules]
+    max_calls: 2
+  format:
+    max_chars: 1200
+    no_markdown_tables: true
+  content:
+    must_include_any: [minecraft, down, 0]
+    must_not_include:
+      - scrape is broken
+    grounded: true
+  style:
+    no_follow_up_question: true
+    no_investigation_essay: true
+    labeled_finding: true

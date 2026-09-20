@@ -1,0 +1,45 @@
+id: dashboard-search-webhook
+description: search_dashboards webhook is empty; zinohub/download has the board
+prompt: show me the webhook broker dashboard
+tags: [dashboards, webhook, core]
+tools:
+  - name: search_dashboards
+    when:
+      query: webhook
+    result: []
+  - name: search_dashboards
+    when:
+      query_includes: zinohub
+    result:
+      - { title: Zinohub downloading, uid: zinohub-downloading }
+  - name: search_dashboards
+    when:
+      query_includes: download
+    result:
+      - { title: Zinohub downloading, uid: zinohub-downloading }
+  - name: get_dashboard_summary
+    when:
+      uid: zinohub-downloading
+    result:
+      title: Zinohub downloading
+      uid: zinohub-downloading
+      panels: 8
+expect:
+  tools:
+    must_call:
+      - name: search_dashboards
+    max_calls: 3
+  format:
+    max_chars: 1200
+    no_markdown_tables: true
+  content:
+    must_include_any:
+      - zinohub-downloading
+      - Zinohub
+    must_not_include:
+      - no dashboard
+      - does not exist
+  style:
+    no_follow_up_question: true
+    no_investigation_essay: true
+    labeled_finding: true

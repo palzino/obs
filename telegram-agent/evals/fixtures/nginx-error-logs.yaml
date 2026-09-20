@@ -1,0 +1,103 @@
+id: nginx-error-logs
+description: Summarize nginx error logs without blaming Loki for a bad query
+prompt: summarise nginx error logs for the past 72 hours
+tags: [loki, nginx, style, core]
+tools:
+  - name: list_loki_label_names
+    result:
+      - service_name
+      - detected_level
+      - host
+  - name: list_loki_label_values
+    when:
+      labelName: service_name
+    result:
+      - nginx
+      - alloy
+      - download-webhook-api
+      - authentik
+  - name: list_loki_label_values
+    when:
+      labelName: detected_level
+    result:
+      - error
+      - warn
+      - info
+  - name: query_loki_stats
+    when:
+      logql_includes: "{"
+      logql_excludes: "*"
+    result:
+      streams: 1
+      entries: 664
+      bytes: 182000
+  - name: query_loki_logs
+    when:
+      logql_includes: "{"
+      logql_excludes: "*"
+    result:
+      count: 664
+      lines:
+        - '2026-09-18T15:47:53Z nginx/external-proxy 502 Bad Gateway spotify.palzinode.co.uk upstream 192.168.1.16:3500 connect() failed (111: Connection refused) client 35.205.88.64 scanner probe wp-config.txt .env'
+        - '2026-09-18T16:07:28Z nginx/external-proxy 502 Bad Gateway spotify.palzinode.co.uk upstream 192.168.1.16:3500 OAI-SearchBot /robots.txt Connection refused'
+      note: All 664 error lines are 502 Bad Gateway to spotify.palzinode.co.uk upstream 192.168.1.16:3500. Auth-server, auth-worker, fitnessai, and authentik on 192.168.1.16 are healthy.
+  - name: query_prometheus
+    when:
+      datasourceUid: prometheus
+      expr_includes: nginx
+    result:
+      resultType: vector
+      result:
+        - metric: { job: nginx, instance: nginx }
+          value: [1779220000, "120"]
+  - name: list_datasources
+    result:
+      - { name: prometheus, uid: prometheus, type: prometheus }
+      - { name: loki, uid: loki, type: loki }
+      - { name: tempo, uid: tempo, type: tempo }
+  - name: check_datasources_health
+    result:
+      - { uid: prometheus, status: OK }
+      - { uid: loki, status: OK }
+      - { uid: tempo, status: OK }
+  - name: search_dashboards
+    when:
+      query_includes: nginx
+    result:
+      - { title: NGINX, uid: obs-nginx }
+  - name: get_dashboard_panel_queries
+    when:
+      uid: obs-nginx
+    result:
+      - title: Active connections
+        query: nginx_connections_active
+      - title: Requests
+        query: nginx_http_requests_total
+expect:
+  tools:
+    must_call:
+      - name: query_loki_logs
+        args:
+          logql_includes: "{"
+          logql_excludes: "*"
+          datasourceUid: loki
+    max_calls: 2
+  format:
+    max_chars: 1200
+    no_markdown_tables: true
+  content:
+    must_include_any: ["502", "664"]
+    must_not_include:
+      - not functional
+      - malfunctioning
+      - not accessible
+      - syntax error
+      - Loki API is not accepting
+    grounded: true
+  style:
+    forbid_phrases:
+      - Based on my investigation
+      - Would you like me to
+    no_follow_up_question: true
+    no_investigation_essay: true
+    labeled_finding: true

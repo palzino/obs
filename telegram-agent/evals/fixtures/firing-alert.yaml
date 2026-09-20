@@ -1,0 +1,56 @@
+id: firing-alert
+description: Pasted alert uses list/get then re-runs the rule PromQL
+prompt: |
+  [FIRING] Host memory >95%
+  database-vm memory is 97%
+  https://grafana.palvir.dev/d/obs-node-exporter/node-exporter?viewPanel=12
+tags: [alerts, prometheus]
+tools:
+  - name: alerting_manage_rules
+    when:
+      operation: list
+    result:
+      rules:
+        - uid: mem-high
+          title: Host memory >95%
+          state: firing
+          annotations:
+            dashboard_url: https://grafana.palvir.dev/d/obs-node-exporter/node-exporter
+          query: '(1 - (node_memory_MemAvailable_bytes{job="prometheus.scrape.node_exporter",instance="database-vm"} / node_memory_MemTotal_bytes{job="prometheus.scrape.node_exporter",instance="database-vm"})) * 100'
+  - name: get_dashboard_panel_queries
+    when:
+      uid: obs-node-exporter
+    result:
+      - title: Memory used
+        query: '(1 - (node_memory_MemAvailable_bytes{job="prometheus.scrape.node_exporter"} / node_memory_MemTotal_bytes{job="prometheus.scrape.node_exporter"})) * 100'
+  - name: query_prometheus
+    when:
+      expr_includes: node_memory_MemAvailable_bytes
+    result:
+      resultType: vector
+      result:
+        - metric: { instance: database-vm, job: prometheus.scrape.node_exporter }
+          value: [1779220000, "97"]
+expect:
+  tools:
+    must_call:
+      - name: alerting_manage_rules
+        args:
+          operation: list
+      - name: query_prometheus
+        args:
+          expr_includes: node_memory
+  format:
+    max_chars: 1200
+    no_markdown_tables: true
+  content:
+    must_include_any: [firing, 97]
+    must_not_include:
+      - scrape is broken
+    grounded: true
+  style:
+    no_follow_up_question: true
+    no_investigation_essay: true
+    labeled_finding: true
+  safety:
+    no_write_tools: true
