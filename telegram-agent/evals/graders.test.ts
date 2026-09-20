@@ -462,6 +462,101 @@ test("named nginx req/min needs 17.8 or 18, not the per-second stub", async () =
   expect(gradeQuality(fixture, good).score).toBe(3);
 });
 
+test("unfiltered zinohub histogram as 318k fails most-traffic-7d", async () => {
+  const fixture = await loadFixture("most-traffic-7d");
+  const bad: AgentTurn = {
+    model: "test",
+    usage: {},
+    tools: [
+      {
+        name: "query_prometheus",
+        input: {
+          datasourceUid: "prometheus",
+          expr: "sum(increase(http_server_request_duration_seconds_count[7d]))",
+        },
+        output: { result: [{ metric: {}, value: [1779220000, "318298"] }] },
+      },
+      {
+        name: "query_prometheus",
+        input: {
+          datasourceUid: "prometheus",
+          expr: "sum(increase(nginx_http_requests_total[7d]))",
+        },
+        output: {
+          result: [{ metric: { job: "prometheus.scrape.nginx" }, value: [1779220000, "237637"] }],
+        },
+      },
+    ],
+    text: `Finding: **zinohub** handles the most traffic
+• Traffic: zinohub 318298 requests
+• Traffic: nginx 237637 requests`,
+  };
+  const checks = grade(fixture, bad);
+  expect(passed(checks)).toBe(false);
+  expect(checks.filter((check) => !check.ok).map((check) => check.id)).toEqual(
+    expect.arrayContaining(["content.must_not_include.318"]),
+  );
+});
+
+test("filtered zinohub and nginx winner passes most-traffic-7d", async () => {
+  const fixture = await loadFixture("most-traffic-7d");
+  const good: AgentTurn = {
+    model: "test",
+    usage: {},
+    tools: [
+      {
+        name: "query_prometheus",
+        input: {
+          datasourceUid: "prometheus",
+          expr: "sum(increase(nginx_http_requests_total[7d]))",
+        },
+        output: {
+          result: [{ metric: { job: "prometheus.scrape.nginx" }, value: [1779220000, "237637"] }],
+        },
+      },
+      {
+        name: "query_prometheus",
+        input: {
+          datasourceUid: "prometheus",
+          expr: "sum(increase(webhook_http_requests_total[7d]))",
+        },
+        output: {
+          result: [{ metric: { job: "download-webhook-api" }, value: [1779220000, "40384"] }],
+        },
+      },
+      {
+        name: "query_prometheus",
+        input: {
+          datasourceUid: "prometheus",
+          expr: 'sum(increase(http_server_request_duration_seconds_count{service_name="zinohub"}[7d]))',
+        },
+        output: {
+          result: [{ metric: { service_name: "zinohub" }, value: [1779220000, "41895"] }],
+        },
+      },
+      {
+        name: "query_prometheus",
+        input: {
+          datasourceUid: "prometheus",
+          expr: 'sum(increase(http_server_request_duration_seconds_count{service_name="zinohub",http_route="/health"}[7d]))',
+        },
+        output: {
+          result: [
+            { metric: { service_name: "zinohub", http_route: "/health" }, value: [1779220000, "40181"] },
+          ],
+        },
+      },
+    ],
+    text: `Finding: **Nginx** most HTTP in 7d (**237637**)
+• HTTP: zinohub 41895 (40181 /health)
+• HTTP: download-webhook-api 40384
+• Traffic: Alloy excluded (not a user service)`,
+  };
+  const checks = grade(fixture, good);
+  expect(checks.filter((check) => !check.ok)).toEqual([]);
+  expect(passed(checks)).toBe(true);
+});
+
 test("all fixture yaml files parse", async () => {
   const fixtures = await loadFixtures(fixturesDir);
   expect(fixtures.map((fixture) => fixture.id).toSorted()).toEqual([
@@ -471,6 +566,7 @@ test("all fixture yaml files parse", async () => {
     "empty-query-not-broken",
     "firing-alert",
     "linux-hosts-status",
+    "most-traffic-7d",
     "nginx-error-logs",
     "nginx-requests-per-min",
     "silence-alert-write-ban",
@@ -486,6 +582,7 @@ test("core tag is the prompt-iteration subset", async () => {
     "api-requests-per-min",
     "dashboard-search-webhook",
     "linux-hosts-status",
+    "most-traffic-7d",
     "nginx-error-logs",
     "silence-alert-write-ban",
     "system-health",

@@ -37,11 +37,15 @@ Report alerts, down hosts, hot RAM, probes, error logs, and error traces. Never 
 - Generic: list_loki_label_names, then query {detected_level="error"} or |= "error" with a real selector. Never use logql="*".
 - Summarize service, count, and cause; do not dump logs.
 
-6. Request/API rate/per minute
-- Named nginx or webhook: directly query its counter.
-- Ambiguous: list_prometheus_metric_names(regex=request), then query all three app counters; exclude prometheus_http_requests_total.
-- Counters: nginx_http_requests_total; webhook_http_requests_total for download-webhook-api; http_server_request_duration_seconds_count for zinohub.
-- Per minute = sum(rate(METRIC[5m])) * 60; rate alone is per second. Name each service in the Finding.
+6. Request rate / API / traffic / "most traffic"
+- Named window (7d, 24h): sum(increase(METRIC[<window>])). "Per min" with no window: sum(rate(METRIC[5m]))*60.
+- Traffic ranking / most traffic: skip list_prometheus_metric_names. Three PromQL, then STOP:
+  1) sum(increase(nginx_http_requests_total[<w>])) — reverse proxy; usually the largest HTTP number
+  2) sum(increase(webhook_http_requests_total[<w>])) — download-webhook-api
+  3) sum(increase(http_server_request_duration_seconds_count{service_name="zinohub"}[<w>])) — copy that metric name exactly; it is not *_requests_total
+- Zinohub MUST use service_name="zinohub" and the metric http_server_request_duration_seconds_count. If the query is empty, the name was wrong — retry that exact metric, do not skip zinohub. Never sum() the histogram without the filter (unfiltered is Alloy, job="prometheus.scrape.alloy", not Zinohub).
+- Exclude prometheus_http_requests_total and Alloy from "which service". Optional 4th call: zinohub http_route="/health" vs the rest if health dominates.
+- Finding: the largest of those three (nginx if it is). Do not call Alloy or unfiltered histogram "zinohub".
 
 Global rules:
 - Tempo requires a service_name or trace_id, except route 2 call 6.
@@ -56,7 +60,7 @@ Blackbox jobs: integrations/blackbox/{zinohub,webhook-broker,zino-downloader}.
 
 Reply with no preamble, wrap-up, follow-up offer, headings, or tables. First line must be:
 Finding: <board, host, or service plus requested number>
-Then at most 5 labeled bullets: • <Alerts|Down|Up|Hot|Logs|Traces|HTTP|Jobs|Cause|Rate>: <tool-grounded fact>
+Then at most 5 labeled bullets: • <Alerts|Down|Up|Hot|Logs|Traces|HTTP|Jobs|Cause|Rate|Traffic>: <tool-grounded fact>
 Maximum 1200 characters. Bold only the number or host in the Finding line.`;
 
 export const READ_TOOLS = [

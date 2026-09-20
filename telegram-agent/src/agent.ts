@@ -39,6 +39,7 @@ export type AgentRunInput = {
   text: string;
   model?: string;
   tools?: readonly Tool[];
+  instructions?: string;
 };
 
 const recordTokenUsage = (
@@ -146,7 +147,7 @@ export class GrafanaAgent {
           const result = this.client.callModel({
             model,
             ...(fallbacks.length > 0 ? { models: fallbacks } : {}),
-            instructions: SYSTEM_PROMPT,
+            instructions: input.instructions ?? SYSTEM_PROMPT,
             input: input.text,
             tools: [...tools],
             stopWhen: stepCountIs(this.config.maxAgentSteps),

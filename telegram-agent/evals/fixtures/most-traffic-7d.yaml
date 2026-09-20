@@ -1,0 +1,116 @@
+id: most-traffic-7d
+description: Rank 7-day HTTP traffic — nginx edge, filter zinohub, do not call Alloy zinohub
+prompt: Which service handles the most traffic in past 7 days
+tags: [prometheus, http, traffic, core]
+tools:
+  - name: list_prometheus_metric_names
+    result:
+      - nginx_http_requests_total
+      - prometheus_http_requests_total
+      - webhook_http_requests_total
+      - http_server_request_duration_seconds_count
+      - xdownloader_http_requests_total
+  - name: query_prometheus
+    when:
+      expr_includes:
+        - http_server_request_duration_seconds_count
+        - service_name="zinohub"
+        - http_route="/health"
+    result:
+      resultType: vector
+      result:
+        - metric: { service_name: zinohub, http_route: "/health" }
+          value: [1779220000, "40181"]
+      note: zinohub /health only
+  - name: query_prometheus
+    when:
+      expr_includes:
+        - http_server_request_duration_seconds_count
+        - service_name="zinohub"
+    result:
+      resultType: vector
+      result:
+        - metric: { service_name: zinohub }
+          value: [1779220000, "41895"]
+      note: zinohub only, includes health
+  - name: query_prometheus
+    when:
+      expr_includes: http_server_request_duration_seconds_count
+    result:
+      resultType: vector
+      result:
+        - metric: {}
+          value: [1779220000, "318298"]
+      note: Alloy + zinohub + zino-ci. Not zinohub.
+  - name: query_prometheus
+    when:
+      expr_includes: nginx_http_requests_total
+    result:
+      resultType: vector
+      result:
+        - metric: { job: prometheus.scrape.nginx }
+          value: [1779220000, "237637"]
+  - name: query_prometheus
+    when:
+      expr_includes: webhook_http_requests_total
+    result:
+      resultType: vector
+      result:
+        - metric: { job: download-webhook-api }
+          value: [1779220000, "40384"]
+  - name: query_prometheus
+    when:
+      expr_includes: prometheus_http_requests_total
+    result:
+      resultType: vector
+      result:
+        - metric: { job: prometheus }
+          value: [1779220000, "565662"]
+expect:
+  tools:
+    must_call:
+      - name: query_prometheus
+        args:
+          expr_includes:
+            - nginx_http_requests_total
+            - increase(
+            - "[7d]"
+      - name: query_prometheus
+        args:
+          expr_includes:
+            - http_server_request_duration_seconds_count
+            - service_name="zinohub"
+            - increase(
+  format:
+    max_chars: 1200
+    no_markdown_tables: true
+    no_markdown_headings: true
+  content:
+    must_include:
+      - nginx
+    must_include_any: ["237", "238"]
+    must_not_include:
+      - "318"
+      - "565662"
+      - scrape is broken
+    grounded: true
+  style:
+    no_follow_up_question: true
+    no_investigation_essay: true
+    labeled_finding: true
+  quality:
+    - id: exclude_alloy
+      points: 2
+      tools:
+        must_call:
+          - name: query_prometheus
+            args:
+              expr_includes: service_name="zinohub"
+              expr_excludes: prometheus_http_requests_total
+    - id: health_split
+      points: 1
+      tools:
+        must_call:
+          - name: query_prometheus
+            args:
+              expr_includes: http_route="/health"
