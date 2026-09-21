@@ -154,7 +154,10 @@ export class GrafanaAgent {
             doomLoop: true,
             state: stateFor(input.chatId),
             signal: controller.signal,
-            provider: { sort: "throughput" },
+            provider:
+              this.config.openRouterProviderOnly.length > 0
+                ? { only: this.config.openRouterProviderOnly, allowFallbacks: false }
+                : { sort: "throughput" as const },
             hooks: {
               PreToolUse: [
                 {

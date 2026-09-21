@@ -15,14 +15,14 @@ Ask `what's the state of my linux servers` and it queries Prometheus (node expor
 
 ```env
 OPENROUTER_API_KEY=sk-or-...
-OPENROUTER_MODEL=deepseek/deepseek-v4-flash-0731:nitro
-OPENROUTER_FALLBACK_MODELS=z-ai/glm-5.3-flashx
+OPENROUTER_MODEL=openai/gpt-5.6-luna
+OPENROUTER_PROVIDER_ONLY=azure/eu
 TELEGRAM_BOT_TOKEN=
 TELEGRAM_ALLOWED_CHAT_IDS=123456789
 TELEGRAM_AGENT_VERSION=:latest
 ```
 
-Optional: `GRAFANA_MCP_URL` (default `http://mcp-grafana:8000/mcp`), `AGENT_MAX_STEPS` (default `12`), `AGENT_TIMEOUT_MS` (default `90000`). Default model is DeepSeek Flash 0731 with OpenRouter `:nitro` (highest-throughput provider). If that provider fails, the request falls back to `z-ai/glm-5.3-flashx`. Set `OPENROUTER_MODEL` / `OPENROUTER_FALLBACK_MODELS` to override (empty fallback list disables fallback).
+Optional: `GRAFANA_MCP_URL` (default `http://mcp-grafana:8000/mcp`), `AGENT_MAX_STEPS` (default `12`), `AGENT_TIMEOUT_MS` (default `90000`). Default model is `openai/gpt-5.6-luna` pinned to the OpenRouter `azure/eu` provider. Set `OPENROUTER_MODEL` to override. `OPENROUTER_PROVIDER_ONLY` is a comma-separated provider list (empty uses OpenRouter throughput sort). `OPENROUTER_FALLBACK_MODELS` is an optional comma-separated model list if the primary model errors.
 
 OTel (OTLP HTTP → Alloy `:4319`): traces (`invoke_agent`, `execute_tool {name}`, `telegram.handle_message`) and metrics. Prompt text is not recorded. Disable with `OTEL_SDK_DISABLED=true`.
 
@@ -69,7 +69,7 @@ Fixture-driven model comparison. Same system prompt as Telegram, mocked Grafana 
 
 ```bash
 cd telegram-agent
-OPENROUTER_API_KEY=sk-or-... bun run eval --tag core --model deepseek/deepseek-v4-flash-0731:nitro
+OPENROUTER_API_KEY=sk-or-... bun run eval --tag core --model openai/gpt-5.6-luna
 OPENROUTER_API_KEY=sk-or-... bun run eval --models a,b --concurrency 8
 OPENROUTER_API_KEY=sk-or-... bun run eval --fixture nginx-error-logs --model google/gemini-2.5-flash
 ```

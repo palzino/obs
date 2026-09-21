@@ -66,6 +66,12 @@ const schemas: Record<string, typeof loose> = {
     uid: z.string().optional(),
     panelId: z.number().optional(),
   }),
+  generate_deeplink: z.object({
+    resourceType: z.string().optional(),
+    dashboardUid: z.string().optional(),
+    panelId: z.number().optional(),
+    datasourceUid: z.string().optional(),
+  }),
   get_dashboard_property: z.object({
     uid: z.string().optional(),
     jsonPath: z.string().optional(),
@@ -124,7 +130,10 @@ const descriptions: Record<string, string> = {
   list_prometheus_metric_names: "List Prometheus metric names, optionally filtered by regex.",
   search_dashboards: "Search Grafana dashboards by title. search webhook is empty; try the service name.",
   get_dashboard_summary: "Dashboard overview by UID.",
-  get_dashboard_panel_queries: "Panel PromQL/LogQL from a dashboard UID.",
+  get_dashboard_panel_queries:
+    "Panel PromQL/LogQL from a dashboard UID. Prefer this or get_dashboard_summary over full dashboard JSON.",
+  generate_deeplink:
+    "Grafana URL for a dashboard, panel, or Explore query. Use when you already have a UID. Do not describe navigation steps.",
   alerting_manage_rules: "Alert rules. operation must be list or get only. Never create, update, or delete.",
   list_datasources: "List Grafana datasources. UIDs are prometheus, loki, tempo.",
   get_datasource: "Get one datasource by uid or name.",
@@ -153,6 +162,10 @@ const unmatchedResult = (name: string, input: Record<string, unknown>): unknown 
     name === "search_folders"
   ) {
     return [];
+  }
+  if (name === "generate_deeplink") {
+    const uid = String(input.dashboardUid ?? "obs-overview");
+    return { url: `https://monitoring.palvir.dev/d/${uid}` };
   }
   return { result: [] };
 };
