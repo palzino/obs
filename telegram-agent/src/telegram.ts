@@ -3,6 +3,11 @@ import { Bot, type Context } from "grammy";
 import type { GrafanaAgent } from "./agent.ts";
 import type { Config } from "./config.ts";
 import { messageCounter, tracer } from "./otel.ts";
+import versionFile from "../version.json" with { type: "json" };
+
+export const AGENT_VERSION: string = versionFile.version;
+
+export const withVersionFooter = (text: string): string => `${text}\n\nv${AGENT_VERSION}`;
 
 const TELEGRAM_LIMIT = 4000;
 
@@ -60,7 +65,9 @@ export const startTelegram = (config: Config, agent: GrafanaAgent): Bot => {
       return;
     }
     await ctx.reply(
-      "Ask about Linux hosts or Proxmox. Example: what's the state of my linux servers",
+      withVersionFooter(
+        "Ask about Linux hosts or Proxmox. Example: what's the state of my linux servers",
+      ),
     );
   });
 
@@ -98,7 +105,7 @@ export const startTelegram = (config: Config, agent: GrafanaAgent): Bot => {
       async (span) => {
         try {
           const reply = await agent.ask(ctx.chat.id, ctx.message.text);
-          for (const chunk of splitTelegramText(reply)) {
+          for (const chunk of splitTelegramText(withVersionFooter(reply))) {
             await ctx.reply(chunk);
           }
           messageCounter.add(1, { outcome: "success" });
@@ -108,7 +115,7 @@ export const startTelegram = (config: Config, agent: GrafanaAgent): Bot => {
           const message = error instanceof Error ? error.message : "unknown error";
           span.recordException(error instanceof Error ? error : new Error(message));
           span.setStatus({ code: SpanStatusCode.ERROR, message });
-          await ctx.reply(`Agent failed: ${message}`);
+          await ctx.reply(withVersionFooter(`Agent failed: ${message}`));
         } finally {
           typing.abort();
           busy.delete(ctx.chat.id);

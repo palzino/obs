@@ -5,7 +5,7 @@ WORKDIR /app
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile --production
 
-COPY tsconfig.json ./
+COPY tsconfig.json version.json ./
 COPY src ./src
 
 USER bun

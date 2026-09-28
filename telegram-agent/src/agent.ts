@@ -10,6 +10,7 @@ import { SpanStatusCode, type Span } from "@opentelemetry/api";
 import type { AgentSettings } from "./config.ts";
 import { askDuration, endSpanErr, endSpanOk, tokenCounter, tracer } from "./otel.ts";
 import { READ_TOOLS, SYSTEM_PROMPT } from "./prompt.ts";
+import versionFile from "../version.json" with { type: "json" };
 
 const memory = new Map<number, ConversationState | null>();
 
@@ -99,7 +100,7 @@ export class GrafanaAgent {
       resources: false,
       clientInfo: {
         name: "obs-telegram-agent",
-        version: "0.1.0",
+        version: versionFile.version,
       },
     });
   }
@@ -154,10 +155,12 @@ export class GrafanaAgent {
             doomLoop: true,
             state: stateFor(input.chatId),
             signal: controller.signal,
-            provider:
-              this.config.openRouterProviderOnly.length > 0
+            provider: {
+              zdr: true,
+              ...(this.config.openRouterProviderOnly.length > 0
                 ? { only: this.config.openRouterProviderOnly, allowFallbacks: false }
-                : { sort: "throughput" as const },
+                : { sort: "throughput" as const }),
+            },
             hooks: {
               PreToolUse: [
                 {
