@@ -21,7 +21,7 @@ Living checklist for the homelab observability stack (Alloy, Prometheus, Loki, T
 - [x] `proxmox_guest` relabelling on node_exporter and cadvisor targets for guest reconcile
 - [x] Physical OPNsense at `192.168.0.1` monitored via node exporter; no `proxmox_guest` label (hot-standby Proxmox VM excluded)
 
-### Dashboards in `obs` folder (13)
+### Dashboards in `obs` folder (14)
 
 | Dashboard | UID | Notes |
 |-----------|-----|-------|
@@ -37,6 +37,7 @@ Living checklist for the homelab observability stack (Alloy, Prometheus, Loki, T
 | AdGuard Exporter | `MIBVglomg` | DNS filtering (existing layout, fixed datasource) |
 | qBittorrent | `OEyH9tQZk` | Torrent client (existing layout, fixed datasource) |
 | OpenTelemetry APM | `obs-otel-apm` | App traces/metrics/logs |
+| OpenRouter | `obs-openrouter` | Broadcast generations: provider speed, tokens, cost (Tempo TraceQL) |
 | Loki logs | `obs-loki-logs` | Log volume, error/warn rates, top noisy services, live search |
 
 ### Alert rules (`obs infrastructure` → Telegram)
