@@ -22,6 +22,27 @@ otelcol.receiver.otlp "default" {
   }
 }
 
+// Public OpenRouter ingest (nginx POST /v1/traces → :4320). Traces to Tempo only.
+otelcol.receiver.otlp "openrouter" {
+  http {
+    endpoint = "0.0.0.0:4320"
+  }
+
+  output {
+    traces = [otelcol.processor.batch.openrouter.input]
+  }
+}
+
+otelcol.processor.batch "openrouter" {
+  timeout             = "5s"
+  send_batch_size     = 1024
+  send_batch_max_size = 2048
+
+  output {
+    traces = [otelcol.exporter.otlp.tempo.input]
+  }
+}
+
 // Batch processor
 otelcol.processor.batch "default" {
   timeout          = "5s"
