@@ -960,6 +960,194 @@
     },
     {
       "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "description": "Average decode speed. Higher is faster.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 80
+              },
+              {
+                "color": "green",
+                "value": 150
+              }
+            ]
+          },
+          "unit": "suffix:tok/s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 23
+      },
+      "id": 22,
+      "options": {
+        "displayMode": "gradient",
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "color"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "filters": [],
+          "hide": true,
+          "metricsQueryType": "instant",
+          "query": "{ resource.service.name = \"openrouter\" && name = \"LLM Generation\" } | avg_over_time(span.trace.metadata.openrouter.inter_token_latency_ms) by (span.gen_ai.request.model)",
+          "queryType": "traceql",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "name": "Expression",
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "expression": "1000 / $A",
+          "refId": "Z",
+          "type": "math"
+        }
+      ],
+      "title": "Speed by model",
+      "transformations": [
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "span.gen_ai.request.model=\"([^\"]+)\"",
+            "renamePattern": "$1"
+          }
+        }
+      ],
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "description": "Same speed, split by who actually served it.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 80
+              },
+              {
+                "color": "green",
+                "value": 150
+              }
+            ]
+          },
+          "unit": "suffix:tok/s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 23
+      },
+      "id": 23,
+      "options": {
+        "displayMode": "gradient",
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "color"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "filters": [],
+          "hide": true,
+          "metricsQueryType": "instant",
+          "query": "{ resource.service.name = \"openrouter\" && name = \"LLM Generation\" } | avg_over_time(span.trace.metadata.openrouter.inter_token_latency_ms) by (span.gen_ai.request.model, span.trace.metadata.openrouter.provider_name)",
+          "queryType": "traceql",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "name": "Expression",
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "expression": "1000 / $A",
+          "refId": "Z",
+          "type": "math"
+        }
+      ],
+      "title": "Speed by model + provider",
+      "transformations": [
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "span.gen_ai.request.model=\"([^\"]+)\".*span.trace.metadata.openrouter.provider_name=\"([^\"]+)\"",
+            "renamePattern": "$1 \u00b7 $2"
+          }
+        }
+      ],
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
         "type": "tempo",
         "uid": "tempo"
       },
@@ -982,7 +1170,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 23
+        "y": 31
       },
       "id": 13,
       "options": {
@@ -1040,7 +1228,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 23
+        "y": 31
       },
       "id": 14,
       "options": {
@@ -1099,7 +1287,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 31
+        "y": 39
       },
       "id": 15,
       "options": {
@@ -1168,7 +1356,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 31
+        "y": 39
       },
       "id": 16,
       "options": {
@@ -1218,7 +1406,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 39
+        "y": 47
       },
       "id": 103,
       "title": "Tokens",
@@ -1248,7 +1436,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 40
+        "y": 48
       },
       "id": 17,
       "options": {
@@ -1361,7 +1549,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 40
+        "y": 48
       },
       "id": 21,
       "options": {
@@ -1411,7 +1599,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 48
+        "y": 56
       },
       "id": 104,
       "title": "Recent generations",
@@ -1426,7 +1614,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 49
+        "y": 57
       },
       "id": 18,
       "options": {},
@@ -1452,7 +1640,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 59
+        "y": 67
       },
       "id": 105,
       "title": "Public door",
@@ -1482,7 +1670,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 60
+        "y": 68
       },
       "id": 19,
       "options": {
@@ -1520,7 +1708,7 @@
         "h": 2,
         "w": 24,
         "x": 0,
-        "y": 67
+        "y": 75
       },
       "id": 20,
       "options": {
@@ -1556,5 +1744,5 @@
   "timezone": "browser",
   "title": "OpenRouter",
   "uid": "obs-openrouter",
-  "version": 2
+  "version": 3
 }
