@@ -54,6 +54,10 @@ services:
     container_name: tempo
     user: "0"
     command: [ "-config.file=/etc/tempo.yaml" ]
+    labels:
+      # git-compose `up -d` does not recreate on bind-mount yaml edits; bump this
+      # when Tempo must reload tempo.yaml.
+      - "obs.tempo.config=metrics-max-duration-24h"
     volumes:
       - ./tempo/tempo.yaml:/etc/tempo.yaml
       - ./tempo/data:/tmp/tempo
