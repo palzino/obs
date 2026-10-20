@@ -20,6 +20,13 @@ query_frontend:
     duration_slo: 5s
   trace_by_id:
     duration_slo: 5s
+  # Image default is 3h (docs now say 24h). Without this, TraceQL metrics 400:
+  # "time range exceeds the maximum allowed duration of 3h0m0s".
+  # query_backend_after must stay <= local-blocks complete_block_timeout (1h)
+  # or the 30m–1h window is empty (grafana/tempo#6107).
+  metrics:
+    max_duration: 24h
+    query_backend_after: 30m
 
 ingester:
   flush_all_on_shutdown: true
@@ -33,6 +40,9 @@ metrics_generator:
     path: /tmp/tempo/generator/wal
   traces_storage:
     path: /tmp/tempo/generator/traces
+  processor:
+    local_blocks:
+      flush_to_storage: true
 
 overrides:
   defaults:
