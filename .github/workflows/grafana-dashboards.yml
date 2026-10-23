@@ -1,97 +1,33 @@
-name: Grafana Dashboards
+name: Grafana dashboards validation
 
 on:
   pull_request:
     paths:
       - "grafana-dashboards/**"
-  push:
-    branches:
-      - master
-      - main
-    paths:
-      - "grafana-dashboards/**"
+      - ".github/workflows/grafana-dashboards.yml"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
-  group: grafana-dashboards-${{ github.ref }}
+  group: terraform-validation-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  plan:
+  validate:
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: grafana-dashboards
-
-    env:
-      TF_VAR_grafana_url: ${{ vars.GRAFANA_URL }}
-      TF_VAR_grafana_auth: ${{ secrets.GRAFANA_AUTH }}
-      TF_HTTP_ADDRESS: ${{ vars.TF_HTTP_ADDRESS }}
-      TF_HTTP_LOCK_ADDRESS: ${{ vars.TF_HTTP_LOCK_ADDRESS }}
-      TF_HTTP_UNLOCK_ADDRESS: ${{ vars.TF_HTTP_UNLOCK_ADDRESS }}
-      TF_HTTP_LOCK_METHOD: POST
-      TF_HTTP_UNLOCK_METHOD: DELETE
-      TF_HTTP_USERNAME: ${{ secrets.TF_HTTP_USERNAME }}
-      TF_HTTP_PASSWORD: ${{ secrets.TF_HTTP_PASSWORD }}
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.9.8
-
-      - name: Validate required configuration
-        run: |
-          set -eu
-
-          missing=()
-          for name in TF_VAR_grafana_url TF_VAR_grafana_auth TF_HTTP_ADDRESS TF_HTTP_USERNAME TF_HTTP_PASSWORD; do
-            if [ -z "${!name:-}" ]; then
-              missing+=("$name")
-            fi
-          done
-
-          if [ "${#missing[@]}" -gt 0 ]; then
-            echo "Missing required GitHub configuration:"
-            printf '  - %s\n' "${missing[@]}"
-            exit 1
-          fi
-
-          if [ -z "${TF_HTTP_LOCK_ADDRESS:-}" ]; then
-            echo "TF_HTTP_LOCK_ADDRESS is unset; defaulting to \${TF_HTTP_ADDRESS}/lock"
-            echo "TF_HTTP_LOCK_ADDRESS=${TF_HTTP_ADDRESS}/lock" >> "$GITHUB_ENV"
-          fi
-
-          if [ -z "${TF_HTTP_UNLOCK_ADDRESS:-}" ]; then
-            echo "TF_HTTP_UNLOCK_ADDRESS is unset; defaulting to \${TF_HTTP_ADDRESS}/lock"
-            echo "TF_HTTP_UNLOCK_ADDRESS=${TF_HTTP_ADDRESS}/lock" >> "$GITHUB_ENV"
-          fi
-
-          echo "Using Gitea-compatible Terraform HTTP backend lock settings (POST/DELETE)."
-
+          terraform_version: 1.15.8
       - name: Terraform fmt check
         run: terraform fmt -check -recursive
-
-      - name: Terraform init
-        run: terraform init
-
+      - name: Terraform init without state or credentials
+        run: terraform init -backend=false -input=false -lockfile=readonly
       - name: Terraform validate
-        run: terraform validate
-
-      - name: Terraform plan
-        run: terraform plan -input=false -no-color -out=tfplan
-
-      - name: Upload plan artifact
-        if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v4
-        with:
-          name: grafana-dashboards-tfplan-${{ github.run_id }}
-          path: grafana-dashboards/tfplan
-          if-no-files-found: error
-
-      - name: Terraform apply
-        if: github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')
-        run: terraform apply -input=false -no-color -auto-approve tfplan
+        run: terraform validate -no-color
