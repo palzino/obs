@@ -1,4 +1,4 @@
-name: Deploy OBS
+name: Build OBS
 
 on:
   push:
@@ -78,44 +78,3 @@ jobs:
     if: always() && !cancelled() && needs.detect.result == 'success' && (needs.static-checks.result == 'success' || needs.static-checks.result == 'skipped') && needs.detect.outputs.docker == 'true' && (github.ref_name == 'master' || github.ref_name == 'main')
     uses: ./.github/workflows/docker.yml
     secrets: inherit
-
-  deploy:
-    needs:
-      - detect
-      - static-checks
-      - docker
-    if: always() && !cancelled() && needs.detect.result == 'success' && (needs.static-checks.result == 'success' || needs.static-checks.result == 'skipped') && (needs.docker.result == 'success' || needs.docker.result == 'skipped')
-    runs-on: ubuntu-latest
-    steps:
-      - name: Skip deploy when no paths changed
-        if: needs.detect.outputs.changed_count == '0'
-        run: echo "No changed paths found, skipping deploy trigger."
-
-      - name: Trigger zino-ci
-        if: needs.detect.outputs.changed_count != '0'
-        env:
-          ZINO_DEPLOY_TOKEN: ${{ secrets.ZINO_DEPLOY_TOKEN }}
-          ZINO_DEPLOY_URL: ${{ secrets.ZINO_DEPLOY_URL }}
-          CHANGED_JSON: ${{ needs.detect.outputs.changed_json }}
-        run: |
-          set -eu
-
-          curl -fsS -X POST ${ZINO_DEPLOY_URL} \
-            -H "Authorization: Bearer ${ZINO_DEPLOY_TOKEN}" \
-            -H "Content-Type: application/json" \
-            -d @- <<JSON
-          {
-            "ref": "${{ github.ref }}",
-            "before": "${{ github.event.before }}",
-            "after": "${{ github.sha }}",
-            "repository": {
-              "name": "obs",
-              "full_name": "${{ github.repository }}"
-            },
-            "commits": [
-              {
-                "modified": ${CHANGED_JSON}
-              }
-            ]
-          }
-          JSON
