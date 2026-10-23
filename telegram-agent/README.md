@@ -75,3 +75,17 @@ OPENROUTER_API_KEY=sk-or-... bun run eval --fixture nginx-error-logs --model goo
 ```
 
 Iterate prompts with `--tag core` (health, write-ban, webhook dashboard, ambiguous API rate, nginx logs, linux hosts). Full suite is every fixture. Reports include pass/fail, quality, cost, and a speed section (avg latency, tool count, tokens per case).
+
+## Deployment
+
+zino-ci polls `palzino/obs` on `master`. For Telegram-agent changes it syncs the
+checkout on obs-a, builds this Dockerfile with Docker, and pushes from inside
+the LAN using the host's existing registry login. The Dockerfile's checks stage
+runs the frozen dependency install, typecheck, and all unit tests before the
+runtime image can be produced. GitHub Actions retains push/PR checks; it no
+longer publishes images or sends deployment callbacks.
+
+Images are tagged `gitea.palvir.dev/palzino/obs:<git-sha>`. zino-ci records the
+resolved registry digest and applies it through a temporary Compose override.
+The running service is changed only after build and push succeed. No registry
+credentials are stored in this repository.

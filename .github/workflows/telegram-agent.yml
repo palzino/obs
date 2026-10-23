@@ -1,6 +1,11 @@
 name: Telegram Agent
 
 on:
+  push:
+    branches: [master, main, 'feature-*']
+    paths:
+      - "telegram-agent/**"
+      - ".github/workflows/telegram-agent.yml"
   pull_request:
     paths:
       - "telegram-agent/**"
