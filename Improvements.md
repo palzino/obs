@@ -27,7 +27,7 @@ Living checklist for the homelab observability stack (Alloy, Prometheus, Loki, T
 | Overview | `obs-overview` | Fleet at-a-glance — good Grafana home dashboard candidate |
 | Monitoring stack | `obs-monitoring-stack` | Prometheus, Alloy, core containers on monitoring VM |
 | Node Exporter | `obs-node-exporter` | Lightweight per-host Linux metrics |
-| Guest reconcile | `obs-guest-reconcile` | Proxmox vs node vs cAdvisor via `$guest` variable |
+| Guest reconcile | `obs-guest-reconcile` | Proxmox (InfluxDB) vs node vs cAdvisor via `$guest` variable |
 | cAdvisor | `obs-cadvisor` | Docker containers per host |
 | PostgreSQL | `obs-postgresql` | Plain Docker exporter at `pgsql:9187` |
 | NGINX | `obs-nginx` | Reverse proxy exporter |
@@ -39,12 +39,12 @@ Living checklist for the homelab observability stack (Alloy, Prometheus, Loki, T
 
 | Rule | Severity | For |
 |------|----------|-----|
-| Node exporter down | critical | 5m |
-| Alloy exporter down | critical | 5m |
+| Node exporter down | critical | 5m (excludes `on_demand` targets) |
+| Alloy exporter down | critical | 5m (excludes `on_demand` targets) |
 | Root disk >90% | warning | 10m |
 | Host memory >95% | warning | 10m |
 | Host CPU >90% | warning | 15m |
-| Proxmox guest stopped | warning | 5m (excludes Opnsense standby) |
+| Proxmox guest stopped | warning | 5m, InfluxDB (excludes guests that are normally off) |
 
 ---
 
