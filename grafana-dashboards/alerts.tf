@@ -42,7 +42,7 @@ resource "grafana_rule_group" "obs_infrastructure" {
       }
       datasource_uid = local.prom_datasource_uid
       model = jsonencode({
-        expr          = "up{job=\"prometheus.scrape.node_exporter\"} == 0"
+        expr          = "up{job=\"prometheus.scrape.node_exporter\", on_demand!=\"true\"}"
         refId         = "A"
         editorMode    = "code"
         instant       = true
@@ -80,8 +80,8 @@ resource "grafana_rule_group" "obs_infrastructure" {
         refId      = "C"
         conditions = [{
           evaluator = {
-            type   = "gt"
-            params = [0]
+            type   = "lt"
+            params = [1]
           }
           operator = {
             type = "and"
@@ -123,7 +123,7 @@ resource "grafana_rule_group" "obs_infrastructure" {
       }
       datasource_uid = local.prom_datasource_uid
       model = jsonencode({
-        expr          = "up{job=~\"prometheus.scrape.(nginx|pgsql|adguard|proxmox|cadvisor|qbittorrent)\"} == 0"
+        expr          = "up{job=~\"prometheus.scrape.(nginx|pgsql|adguard)|cadvisor\", on_demand!=\"true\"}"
         refId         = "A"
         editorMode    = "code"
         instant       = true
@@ -161,8 +161,8 @@ resource "grafana_rule_group" "obs_infrastructure" {
         refId      = "C"
         conditions = [{
           evaluator = {
-            type   = "gt"
-            params = [0]
+            type   = "lt"
+            params = [1]
           }
           operator = {
             type = "and"

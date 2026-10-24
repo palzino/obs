@@ -121,6 +121,8 @@ Current node_exporter → guest links:
 | prod-docker-server | prod-apps |
 | qbit | qbit-linux |
 | nginx | ng-alpine |
+| minecraft | mc-server *(on-demand)* |
+| ark-server | ark *(on-demand)* |
 | proxmox hypervisor | *(none — hypervisor node)* |
 
 cAdvisor mappings: lab-pgdb, prod-apps, ark, monitoring-stack.

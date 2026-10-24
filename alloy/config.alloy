@@ -213,6 +213,18 @@ prometheus.scrape "node_exporter" {
       proxmox_guest  = "ng-alpine",
     },
     {
+      __address__    = "192.168.1.20:9100",
+      instance       = "minecraft",
+      proxmox_guest  = "mc-server",
+      on_demand      = "true",
+    },
+    {
+      __address__    = "192.168.1.245:9100",
+      instance       = "ark-server",
+      proxmox_guest  = "ark",
+      on_demand      = "true",
+    },
+    {
       __address__    = "192.168.0.131:9100",
       instance       = "dev-box-vm",
       proxmox_guest  = "dev-box-vm",
@@ -248,6 +260,7 @@ prometheus.scrape "cadvisor" {
       __address__   = "192.168.1.245:8050",
       instance      = "192.168.1.245:8050",
       proxmox_guest = "ark",
+      on_demand     = "true",
     },
     {
       __address__   = "cadvisor:8080",

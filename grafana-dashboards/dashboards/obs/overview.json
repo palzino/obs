@@ -98,7 +98,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "count(up{job=\"prometheus.scrape.node_exporter\"} == 0) or vector(0)",
+          "expr": "count(up{job=\"prometheus.scrape.node_exporter\", on_demand!=\"true\"} == 0) or vector(0)",
           "legendFormat": "down",
           "refId": "A"
         }
