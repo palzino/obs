@@ -197,7 +197,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(pg_stat_database_numbackends{instance=\"pgsql:9187\", datname=~\"$datname\", datname!~\"template.*\"}) / pg_settings_max_connections{instance=\"pgsql:9187\"} * 100",
+          "expr": "sum(pg_stat_database_numbackends{instance=\"pgsql:9187\", datname=~\"$datname\", datname!~\"template.*\"}) / scalar(pg_settings_max_connections{instance=\"pgsql:9187\"}) * 100",
           "legendFormat": "utilization",
           "refId": "A"
         }
