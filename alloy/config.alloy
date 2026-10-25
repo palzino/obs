@@ -196,7 +196,7 @@ prometheus.scrape "node_exporter" {
     {
       __address__    = "192.168.0.145:9100",
       instance       = "database-vm",
-      proxmox_guest  = "lab-pgdb",
+      proxmox_guest  = "internal-services",
     },
     {
       __address__    = "192.168.2.10:9100",
@@ -249,7 +249,7 @@ prometheus.scrape "cadvisor" {
     {
       __address__   = "192.168.0.145:8050",
       instance      = "192.168.0.145:8050",
-      proxmox_guest = "lab-pgdb",
+      proxmox_guest = "internal-services",
     },
     {
       __address__   = "192.168.1.16:8050",
