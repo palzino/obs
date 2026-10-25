@@ -198,7 +198,7 @@ resource "grafana_rule_group" "obs_infrastructure" {
 
     annotations = {
       summary       = "Disk above 85% on {{ $labels.instance }} ({{ $labels.mountpoint }})"
-      description   = "Filesystem {{ $labels.mountpoint }} is above 85% on {{ $labels.instance }} ({{ $labels.proxmox_guest }})."
+      description   = "Local filesystem {{ $labels.mountpoint }} is above 85% on {{ $labels.instance }} ({{ $labels.proxmox_guest }}). Network mounts (cifs) only alert at 95% via Disk critical."
       dashboard_url = "https://monitoring.palvir.dev/d/obs-node-exporter"
     }
 
@@ -210,7 +210,7 @@ resource "grafana_rule_group" "obs_infrastructure" {
       }
       datasource_uid = local.prom_datasource_uid
       model = jsonencode({
-        expr          = "100 * (1 - node_filesystem_avail_bytes{job=\"prometheus.scrape.node_exporter\", fstype!~\"tmpfs|overlay|squashfs|aufs|rootfs|fuse.lxcfs\"} / node_filesystem_size_bytes{job=\"prometheus.scrape.node_exporter\", fstype!~\"tmpfs|overlay|squashfs|aufs|rootfs|fuse.lxcfs\"})"
+        expr          = "100 * (1 - node_filesystem_avail_bytes{job=\"prometheus.scrape.node_exporter\", fstype!~\"tmpfs|overlay|squashfs|aufs|rootfs|fuse.lxcfs|cifs\"} / node_filesystem_size_bytes{job=\"prometheus.scrape.node_exporter\", fstype!~\"tmpfs|overlay|squashfs|aufs|rootfs|fuse.lxcfs|cifs\"})"
         refId         = "A"
         editorMode    = "code"
         instant       = true
