@@ -16,8 +16,7 @@ Living checklist for the homelab observability stack (Alloy, Prometheus, Loki, T
 - [x] Grafana 13 schema-v2 dashboards (`dashboard.grafana.app/v2`) with native
       `TabsLayout` → `RowsLayout` → `AutoGridLayout` for the 9 boards below.
       UIDs and panel IDs are unchanged, so the classic dashboards update in place.
-      AdGuard is still classic (legacy `graph`/`table-old` panels) and is the one
-      remaining rebuild.
+      AdGuard is rebuilt too (current panel types, rate-based charts, honest units).
 
 ### Alloy (`alloy/config.alloy`)
 
@@ -36,7 +35,7 @@ Living checklist for the homelab observability stack (Alloy, Prometheus, Loki, T
 | cAdvisor | `obs-cadvisor` | Tabs: Fleet / Network / Containers |
 | PostgreSQL | `obs-postgresql` | Tabs: Overview / Databases |
 | NGINX | `obs-nginx` | Tabs: Traffic / Connections |
-| AdGuard Exporter | `MIBVglomg` | DNS filtering. Still classic v1 with legacy panel types — rebuild pending |
+| AdGuard Home | `MIBVglomg` | Tabs: Overview / DNS activity / Top talkers. Query and block rates, processing time, top domains and clients |
 | OpenTelemetry APM | `obs-otel-apm` | Tabs: Service RED / Routes / Outbound / Logs and traces |
 | Loki logs | `obs-loki-logs` | Tabs: Overview / Noisy services / Logs |
 
@@ -92,7 +91,7 @@ Shipped as `obs-loki-logs` (`dashboards/obs/loki-logs.json`): volume by service/
 
 Overview shows total container count; a dedicated board could aggregate cAdvisor across all Docker hosts:
 
-- lab-pgdb, prod-apps, ark, monitoring-stack, etc.
+- internal-services, prod-apps, ark, monitoring-stack, etc.
 - Per-host container health, top CPU/memory consumers fleet-wide
 
 ### 3. Tempo / traces overview — lower priority
@@ -122,15 +121,16 @@ Current node_exporter → guest links:
 | Instance | Proxmox guest |
 |----------|---------------|
 | zinohub | Alpine-Jellyfin |
-| database-vm | lab-pgdb |
+| database-vm | internal-services |
 | prod-docker-server | prod-apps |
 | qbit | qbit-linux |
 | nginx | ng-alpine |
 | minecraft | mc-server *(on-demand)* |
 | ark-server | ark *(on-demand)* |
 | proxmox hypervisor | *(none — hypervisor node)* |
+| dev-box-vm | dev-box-vm |
 
-cAdvisor mappings: lab-pgdb, prod-apps, ark, monitoring-stack.
+cAdvisor mappings: internal-services, prod-apps, ark, monitoring-stack.
 
 ---
 
