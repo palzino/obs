@@ -184,6 +184,10 @@ prometheus.scrape "host_metrics" {
 prometheus.scrape "node_exporter" {
   targets = [
     {
+      __address__    = "192.168.0.22:9100",
+      instance       = "nino-pc",
+    },
+    {
       __address__    = "192.168.0.33:9100",
       instance       = "zinohub",
       proxmox_guest  = "Alpine-Jellyfin",

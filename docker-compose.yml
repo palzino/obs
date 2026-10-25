@@ -15,7 +15,7 @@ services:
     labels:
       # git-compose `up -d` does not recreate on bind-mount config edits; bump
       # this when Alloy must reload config.alloy.
-      - "obs.alloy.config=internal-services-guest-rename"
+      - "obs.alloy.config=add-nino-pc-node-exporter"
     ports: 
       - 12345:12345  # Alloy UI & metrics
       - 4318:4318  # OTLP gRPC receiver (metrics, traces, logs)
