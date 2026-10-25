@@ -13,6 +13,11 @@ Living checklist for the homelab observability stack (Alloy, Prometheus, Loki, T
 - [x] GitHub Actions workflow: plan on PR, apply on push
 - [x] 6 alert rules in `alerts.tf` → Telegram contact point (`telegram`)
 - [x] One-time `imports.tf` for MCP-created resources (rule group + early dashboards)
+- [x] Grafana 13 schema-v2 dashboards (`dashboard.grafana.app/v2`) with native
+      `TabsLayout` → `RowsLayout` → `AutoGridLayout` for the 9 boards below.
+      UIDs and panel IDs are unchanged, so the classic dashboards update in place.
+      AdGuard is still classic (legacy `graph`/`table-old` panels) and is the one
+      remaining rebuild.
 
 ### Alloy (`alloy/config.alloy`)
 
@@ -24,16 +29,16 @@ Living checklist for the homelab observability stack (Alloy, Prometheus, Loki, T
 
 | Dashboard | UID | Notes |
 |-----------|-----|-------|
-| Overview | `obs-overview` | Fleet at-a-glance — good Grafana home dashboard candidate |
-| Monitoring stack | `obs-monitoring-stack` | Prometheus, Alloy, core containers on monitoring VM |
-| Node Exporter | `obs-node-exporter` | Lightweight per-host Linux metrics |
-| Guest reconcile | `obs-guest-reconcile` | Proxmox (InfluxDB) vs node vs cAdvisor via `$guest` variable |
-| cAdvisor | `obs-cadvisor` | Docker containers per host |
-| PostgreSQL | `obs-postgresql` | Plain Docker exporter at `pgsql:9187` |
-| NGINX | `obs-nginx` | Reverse proxy exporter |
-| AdGuard Exporter | `MIBVglomg` | DNS filtering (existing layout, fixed datasource) |
-| OpenTelemetry APM | `obs-otel-apm` | App traces/metrics/logs |
-| Loki logs | `obs-loki-logs` | Log volume, error/warn rates, top noisy services, live search |
+| Overview | `obs-overview` | Tabs: Health / Hosts. Fleet at-a-glance — good Grafana home dashboard candidate |
+| Monitoring stack | `obs-monitoring-stack` | Tabs: Health / Containers / Prometheus |
+| Node Exporter | `obs-node-exporter` | Tabs: Summary / Storage and network |
+| Guest reconcile | `obs-guest-reconcile` | Tabs: Summary / CPU / Memory / Containers. Proxmox (InfluxDB) vs node vs cAdvisor via `$guest` |
+| cAdvisor | `obs-cadvisor` | Tabs: Fleet / Network / Containers |
+| PostgreSQL | `obs-postgresql` | Tabs: Overview / Databases |
+| NGINX | `obs-nginx` | Tabs: Traffic / Connections |
+| AdGuard Exporter | `MIBVglomg` | DNS filtering. Still classic v1 with legacy panel types — rebuild pending |
+| OpenTelemetry APM | `obs-otel-apm` | Tabs: Service RED / Routes / Outbound / Logs and traces |
+| Loki logs | `obs-loki-logs` | Tabs: Overview / Noisy services / Logs |
 
 ### Alert rules (`obs infrastructure` → Telegram)
 
