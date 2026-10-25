@@ -1009,4 +1009,172 @@ resource "grafana_rule_group" "obs_infrastructure" {
       group_by      = local.alert_notification_settings.group_by
     }
   }
+
+  # Conformance rules for the OTel service histograms. Here an empty result is
+  # the healthy state, so both NoData and exec errors resolve to OK instead of
+  # alerting; a real Prometheus outage is covered by "Prometheus unreachable".
+  # These series carry service_name rather than instance/job.
+  rule {
+    name           = "Seconds histogram on SDK default buckets"
+    condition      = "C"
+    for            = "5m"
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+
+    labels = merge(local.alert_labels, {
+      severity = "warning"
+    })
+
+    annotations = {
+      summary       = "{{ $labels.service_name }} histogram fell back to SDK default buckets"
+      description   = "A *_seconds histogram on {{ $labels.service_name }} exposes le={{ $labels.le }}, which only exists in the OpenTelemetry SDK default ms-scale boundary set. A histogram is declared without metric.WithUnit(\"s\") and no longer matches the duration view. Re-add metric.WithUnit(\"s\") to the histogram (same bug as Zinohub dbdf16f)."
+      dashboard_url = "https://monitoring.palvir.dev/d/obs-otel-apm"
+    }
+
+    data {
+      ref_id = "A"
+      relative_time_range {
+        from = 600
+        to   = 0
+      }
+      datasource_uid = local.prom_datasource_uid
+      model = jsonencode({
+        expr          = "count by (service_name, le) ({__name__=~\".*_seconds_bucket\", service_name=~\"zinohub|zino-ci|zinodex|download-webhook-api\", le=~\"2500|5000|7500|10000\"})"
+        refId         = "A"
+        editorMode    = "code"
+        instant       = true
+        range         = false
+        intervalMs    = 1000
+        maxDataPoints = 43200
+      })
+    }
+
+    data {
+      ref_id         = "B"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+      model = jsonencode({
+        type       = "reduce"
+        expression = "A"
+        reducer    = "last"
+        refId      = "B"
+      })
+    }
+
+    data {
+      ref_id         = "C"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+      model = jsonencode({
+        type       = "threshold"
+        expression = "B"
+        refId      = "C"
+        conditions = [{
+          evaluator = {
+            type   = "gt"
+            params = [0]
+          }
+          operator = {
+            type = "and"
+          }
+          reducer = {
+            type = "last"
+          }
+        }]
+      })
+    }
+
+    notification_settings {
+      contact_point = local.alert_notification_settings.contact_point
+      group_by      = ["alertname", "service_name"]
+    }
+  }
+
+  rule {
+    name           = "RED metric missing lowest bucket"
+    condition      = "C"
+    for            = "5m"
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+
+    labels = merge(local.alert_labels, {
+      severity = "warning"
+    })
+
+    annotations = {
+      summary       = "http_server_request_duration_seconds lost le=0.005 on {{ $labels.service_name }}"
+      description   = "{{ $labels.service_name }} still reports http_server_request_duration_seconds_bucket but no le=\"0.005\" series, so the estate RED metric lost its lowest bound. A histogram is declared without metric.WithUnit(\"s\") and no longer matches the duration view. Re-add metric.WithUnit(\"s\") to the histogram (same bug as Zinohub dbdf16f)."
+      dashboard_url = "https://monitoring.palvir.dev/d/obs-otel-apm"
+    }
+
+    data {
+      ref_id = "A"
+      relative_time_range {
+        from = 600
+        to   = 0
+      }
+      datasource_uid = local.prom_datasource_uid
+      model = jsonencode({
+        expr          = "count by (service_name) (http_server_request_duration_seconds_bucket{service_name=~\"zinohub|zino-ci|zinodex|download-webhook-api\"}) unless on (service_name) count by (service_name) (http_server_request_duration_seconds_bucket{service_name=~\"zinohub|zino-ci|zinodex|download-webhook-api\", le=\"0.005\"})"
+        refId         = "A"
+        editorMode    = "code"
+        instant       = true
+        range         = false
+        intervalMs    = 1000
+        maxDataPoints = 43200
+      })
+    }
+
+    data {
+      ref_id         = "B"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+      model = jsonencode({
+        type       = "reduce"
+        expression = "A"
+        reducer    = "last"
+        refId      = "B"
+      })
+    }
+
+    data {
+      ref_id         = "C"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+      model = jsonencode({
+        type       = "threshold"
+        expression = "B"
+        refId      = "C"
+        conditions = [{
+          evaluator = {
+            type   = "gt"
+            params = [0]
+          }
+          operator = {
+            type = "and"
+          }
+          reducer = {
+            type = "last"
+          }
+        }]
+      })
+    }
+
+    notification_settings {
+      contact_point = local.alert_notification_settings.contact_point
+      group_by      = ["alertname", "service_name"]
+    }
+  }
 }
