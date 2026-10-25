@@ -1,5 +1,10 @@
 locals {
   prom_datasource_uid = "prometheus"
+  # Proxmox pushes guest metrics to InfluxDB via its native metric server.
+  influx_datasource_uid = "eev3nrqve78cgf"
+
+  # Guests that are normally switched off, so a stopped status is expected.
+  proxmox_stopped_guests = ["ark", "mc-server", "Opnsense", "qbit-linux-dev", "win-10-lab"]
 
   alert_labels = {
     team = "obs"
@@ -42,7 +47,7 @@ resource "grafana_rule_group" "obs_infrastructure" {
       }
       datasource_uid = local.prom_datasource_uid
       model = jsonencode({
-        expr          = "up{job=\"prometheus.scrape.node_exporter\"} == 0"
+        expr          = "up{job=\"prometheus.scrape.node_exporter\", on_demand!=\"true\"}"
         refId         = "A"
         editorMode    = "code"
         instant       = true
@@ -80,8 +85,8 @@ resource "grafana_rule_group" "obs_infrastructure" {
         refId      = "C"
         conditions = [{
           evaluator = {
-            type   = "gt"
-            params = [0]
+            type   = "lt"
+            params = [1]
           }
           operator = {
             type = "and"
@@ -123,7 +128,7 @@ resource "grafana_rule_group" "obs_infrastructure" {
       }
       datasource_uid = local.prom_datasource_uid
       model = jsonencode({
-        expr          = "up{job=~\"prometheus.scrape.(nginx|pgsql|adguard|proxmox|cadvisor|qbittorrent)\"} == 0"
+        expr          = "up{job=~\"prometheus.scrape.(nginx|pgsql|adguard)|cadvisor\", on_demand!=\"true\"}"
         refId         = "A"
         editorMode    = "code"
         instant       = true
@@ -161,8 +166,8 @@ resource "grafana_rule_group" "obs_infrastructure" {
         refId      = "C"
         conditions = [{
           evaluator = {
-            type   = "gt"
-            params = [0]
+            type   = "lt"
+            params = [1]
           }
           operator = {
             type = "and"
@@ -435,8 +440,8 @@ resource "grafana_rule_group" "obs_infrastructure" {
     })
 
     annotations = {
-      summary     = "Proxmox guest stopped ({{ $labels.name }})"
-      description = "Guest {{ $labels.name }} ({{ $labels.type }}) is not running on Proxmox. Hot-standby Opnsense is excluded."
+      summary     = "Proxmox guest stopped ({{ $labels.host }})"
+      description = "Guest {{ $labels.host }} ({{ $labels.object }}) is not running on Proxmox. Guests that are normally off (${join(", ", local.proxmox_stopped_guests)}) are excluded."
     }
 
     data {
@@ -445,13 +450,19 @@ resource "grafana_rule_group" "obs_infrastructure" {
         from = 600
         to   = 0
       }
-      datasource_uid = local.prom_datasource_uid
+      datasource_uid = local.influx_datasource_uid
       model = jsonencode({
-        expr          = "(pve_up == 0) and on(id) pve_guest_info{template=\"0\", name!=\"Opnsense\"}"
+        query         = <<-EOT
+          from(bucket: "proxmox")
+            |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+            |> filter(fn: (r) => r._measurement == "system" and r.object != "nodes" and r._field == "status")
+            |> filter(fn: (r) => not contains(value: r.host, set: ${jsonencode(local.proxmox_stopped_guests)}))
+            |> last()
+            |> map(fn: (r) => ({r with _value: if r._value == "running" then 1.0 else 0.0}))
+            |> group(columns: ["host", "object"])
+            |> keep(columns: ["_time", "_value", "host", "object"])
+        EOT
         refId         = "A"
-        editorMode    = "code"
-        instant       = true
-        range         = false
         intervalMs    = 1000
         maxDataPoints = 43200
       })
@@ -485,8 +496,8 @@ resource "grafana_rule_group" "obs_infrastructure" {
         refId      = "C"
         conditions = [{
           evaluator = {
-            type   = "gt"
-            params = [0]
+            type   = "lt"
+            params = [1]
           }
           operator = {
             type = "and"
@@ -500,7 +511,7 @@ resource "grafana_rule_group" "obs_infrastructure" {
 
     notification_settings {
       contact_point = local.alert_notification_settings.contact_point
-      group_by      = ["alertname", "name", "type"]
+      group_by      = ["alertname", "host"]
     }
   }
 }

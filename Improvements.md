@@ -19,37 +19,32 @@ Living checklist for the homelab observability stack (Alloy, Prometheus, Loki, T
 - [x] Proxmox scrape fix (`instance = "192.168.0.65"`)
 - [x] cAdvisor moved to Alloy (removed duplicate from `prometheus/prometheus.yml`)
 - [x] `proxmox_guest` relabelling on node_exporter and cadvisor targets for guest reconcile
-- [x] Physical OPNsense at `192.168.0.1` monitored via node exporter; no `proxmox_guest` label (hot-standby Proxmox VM excluded)
 
-### Dashboards in `obs` folder (14)
+### Dashboards in `obs` folder (10)
 
 | Dashboard | UID | Notes |
 |-----------|-----|-------|
 | Overview | `obs-overview` | Fleet at-a-glance — good Grafana home dashboard candidate |
 | Monitoring stack | `obs-monitoring-stack` | Prometheus, Alloy, core containers on monitoring VM |
-| OPNsense | `obs-opnsense` | Physical firewall at `192.168.0.1` |
 | Node Exporter | `obs-node-exporter` | Lightweight per-host Linux metrics |
-| Proxmox via Prometheus | `Dp7Cd57Zza` | Host CPU fix applied (raw `pve_cpu_usage_ratio` for nodes) |
-| Guest reconcile | `obs-guest-reconcile` | Proxmox vs node vs cAdvisor via `$guest` variable |
+| Guest reconcile | `obs-guest-reconcile` | Proxmox (InfluxDB) vs node vs cAdvisor via `$guest` variable |
 | cAdvisor | `obs-cadvisor` | Docker containers per host |
 | PostgreSQL | `obs-postgresql` | Plain Docker exporter at `pgsql:9187` |
 | NGINX | `obs-nginx` | Reverse proxy exporter |
 | AdGuard Exporter | `MIBVglomg` | DNS filtering (existing layout, fixed datasource) |
-| qBittorrent | `OEyH9tQZk` | Torrent client (existing layout, fixed datasource) |
 | OpenTelemetry APM | `obs-otel-apm` | App traces/metrics/logs |
-| OpenRouter | `obs-openrouter` | Broadcast generations: provider speed, tokens, cost (Tempo TraceQL) |
 | Loki logs | `obs-loki-logs` | Log volume, error/warn rates, top noisy services, live search |
 
 ### Alert rules (`obs infrastructure` → Telegram)
 
 | Rule | Severity | For |
 |------|----------|-----|
-| Node exporter down | critical | 5m |
-| Alloy exporter down | critical | 5m |
+| Node exporter down | critical | 5m (excludes `on_demand` targets) |
+| Alloy exporter down | critical | 5m (excludes `on_demand` targets) |
 | Root disk >90% | warning | 10m |
 | Host memory >95% | warning | 10m |
 | Host CPU >90% | warning | 15m |
-| Proxmox guest stopped | warning | 5m (excludes Opnsense standby) |
+| Proxmox guest stopped | warning | 5m, InfluxDB (excludes guests that are normally off) |
 
 ---
 
@@ -113,7 +108,6 @@ Improvements outside dashboard JSON.
 |-----|--------|--------|
 | **Node exporter on monitoring-stack VM** | Guest reconcile incomplete for that guest | Install node_exporter; add Alloy scrape + `proxmox_guest = "monitoring-stack"` |
 | **cAdvisor on Alpine-Jellyfin** (`192.168.0.33`) | Docker host visible via node exporter only, no container breakdown | Optional: deploy cAdvisor if container-level metrics needed |
-| **Node exporters down** (e.g. minecraft, ark-server) | Alerts fire after `for` duration | Fix exporter services on those VMs |
 | **Legacy duplicate dashboards** | UI clutter, stale datasource UIDs | Archive per list above |
 
 ### `proxmox_guest` mappings (Alloy)
@@ -126,10 +120,9 @@ Current node_exporter → guest links:
 | database-vm | lab-pgdb |
 | prod-docker-server | prod-apps |
 | qbit | qbit-linux |
-| minecraft | mc-server |
 | nginx | ng-alpine |
-| ark-server | ark |
-| opnsense | *(none — physical appliance)* |
+| minecraft | mc-server *(on-demand)* |
+| ark-server | ark *(on-demand)* |
 | proxmox hypervisor | *(none — hypervisor node)* |
 
 cAdvisor mappings: lab-pgdb, prod-apps, ark, monitoring-stack.

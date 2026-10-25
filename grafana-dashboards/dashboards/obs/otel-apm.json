@@ -99,7 +99,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(rate(http_server_request_duration_seconds_count{job=~\"$service\", deployment_environment_name=~\"$environment\", http_response_status_code=~\"5..\"}[$__rate_interval])) / sum(rate(http_server_request_duration_seconds_count{job=~\"$service\", deployment_environment_name=~\"$environment\"}[$__rate_interval]))",
+          "expr": "sum(rate(http_server_request_duration_seconds_count{job=~\"$service\", deployment_environment_name=~\"$environment\", http_response_status_code=~\"5..\"}[$__rate_interval])) / sum(rate(http_server_request_duration_seconds_count{job=~\"$service\", deployment_environment_name=~\"$environment\"}[$__rate_interval])) or vector(0)",
           "legendFormat": "5xx rate",
           "refId": "A"
         }
@@ -505,7 +505,6 @@
   "templating": {
     "list": [
       {
-        "allValue": ".*",
         "current": {},
         "datasource": { "type": "prometheus", "uid": "prometheus" },
         "definition": "label_values(target_info, job)",

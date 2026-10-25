@@ -199,18 +199,9 @@ prometheus.scrape "node_exporter" {
       proxmox_guest  = "lab-pgdb",
     },
     {
-      __address__    = "192.168.0.1:9100",
-      instance       = "opnsense",
-    },
-    {
       __address__    = "192.168.2.10:9100",
       instance       = "qbit",
       proxmox_guest  = "qbit-linux",
-    },
-    {
-      __address__    = "192.168.1.20:9100",
-      instance       = "minecraft",
-      proxmox_guest  = "mc-server",
     },
     {
       __address__    = "192.168.0.65:9100",
@@ -222,9 +213,16 @@ prometheus.scrape "node_exporter" {
       proxmox_guest  = "ng-alpine",
     },
     {
+      __address__    = "192.168.1.20:9100",
+      instance       = "minecraft",
+      proxmox_guest  = "mc-server",
+      on_demand      = "true",
+    },
+    {
       __address__    = "192.168.1.245:9100",
       instance       = "ark-server",
       proxmox_guest  = "ark",
+      on_demand      = "true",
     },
     {
       __address__    = "192.168.0.131:9100",
@@ -262,6 +260,7 @@ prometheus.scrape "cadvisor" {
       __address__   = "192.168.1.245:8050",
       instance      = "192.168.1.245:8050",
       proxmox_guest = "ark",
+      on_demand     = "true",
     },
     {
       __address__   = "cadvisor:8080",
