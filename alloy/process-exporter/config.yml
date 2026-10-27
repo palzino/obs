@@ -3,15 +3,15 @@
 # visible independently of the service/runner which launched them.
 process_names:
   - name: zinohub-dev
-    exe: [zinohub]
+    exe: [zinohub, main]
     cmdline:
       - '/(dev|dev-build)/.*[Zz]ino[Hh]ub|/root/dev/.*zinohub'
   - name: zinohub-uat
-    exe: [zinohub]
+    exe: [zinohub, main]
     cmdline:
       - '/root/uat/.*zinohub'
   - name: zinohub-prod
-    exe: [zinohub]
+    exe: [zinohub, main]
     cmdline:
       - '/root/zinohub/.*zinohub'
   - name: ffmpeg
