@@ -1,0 +1,33 @@
+# Stable groups only: never put PIDs, media paths, or job IDs in group names.
+# First matching rule wins. Explicit tool groups keep expensive child processes
+# visible independently of the service/runner which launched them.
+process_names:
+  - name: zinohub-dev
+    exe: [zinohub]
+    cmdline:
+      - '/(dev|dev-build)/.*[Zz]ino[Hh]ub|/root/dev/.*zinohub'
+  - name: zinohub-uat
+    exe: [zinohub]
+    cmdline:
+      - '/root/uat/.*zinohub'
+  - name: zinohub-prod
+    exe: [zinohub]
+    cmdline:
+      - '/root/zinohub/.*zinohub'
+  - name: ffmpeg
+    exe: [ffmpeg]
+  - name: ffprobe
+    exe: [ffprobe]
+  - name: go-toolchain
+    exe: [go, compile, link, asm, cgo]
+  - name: go-tests
+    cmdline:
+      - '\.test(\s|$)'
+  - name: native-toolchain
+    exe: [gcc, g++, cc, c++, cc1, cc1plus, clang, clang++, ld, lld, rustc, cargo]
+  - name: actions-runner
+    exe: [act_runner, gitea-actions-runner, Runner.Listener, Runner.Worker]
+  - name: postgres
+    exe: [postgres, postmaster]
+  - name: '{{.Comm}}'
+    cmdline: ['.+']

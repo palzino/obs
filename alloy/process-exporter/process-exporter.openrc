@@ -1,0 +1,14 @@
+#!/sbin/openrc-run
+
+description="Prometheus process exporter"
+command="/usr/local/bin/process-exporter"
+command_args="-config.path=/etc/process-exporter/config.yml -web.listen-address=:9256 -threads=false -gather-smaps=false"
+command_background=true
+pidfile="/run/${RC_SVCNAME}.pid"
+output_log="/var/log/process-exporter.log"
+error_log="/var/log/process-exporter.log"
+
+depend() {
+    need net
+    after firewall
+}

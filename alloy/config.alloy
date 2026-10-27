@@ -92,7 +92,7 @@ otelcol.exporter.otlphttp "newrelic" {
   client {
     endpoint = "https://otlp.eu01.nr-data.net"
     headers = {
-      "api-key" = env("NEW_RELIC_LICENSE_KEY"),
+      "api-key" = sys.env("NEW_RELIC_LICENSE_KEY"),
     }
     compression = "gzip"
     timeout = "30s"
@@ -236,6 +236,25 @@ prometheus.scrape "node_exporter" {
   ]
   forward_to = [prometheus.remote_write.default.receiver]
   scrape_interval = "15s"
+}
+
+// Native exporters run inside each VM so application processes are visible.
+prometheus.scrape "process_exporter" {
+  targets = [
+    {
+      __address__   = "192.168.0.131:9256",
+      instance      = "dev-box-vm",
+      proxmox_guest = "dev-box-vm",
+    },
+    {
+      __address__   = "192.168.0.33:9256",
+      instance      = "zinohub",
+      proxmox_guest = "Alpine-Jellyfin",
+    },
+  ]
+  forward_to      = [prometheus.remote_write.default.receiver]
+  scrape_interval = "15s"
+  scrape_timeout  = "10s"
 }
 
 prometheus.relabel "cadvisor" {

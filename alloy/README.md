@@ -37,6 +37,7 @@ Optional example material for broader setups still exists in this directory, but
 - Alloy self-scrape
 - Host unix exporter
 - External node exporters
+- [VM process exporters](process-exporter/README.md) for the dev and ZinoHub VMs
 - qBittorrent exporter
 
 ### Logs
