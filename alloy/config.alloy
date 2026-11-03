@@ -13,6 +13,20 @@ otelcol.receiver.otlp "default" {
 
   http {
     endpoint = "0.0.0.0:4319"
+
+    // Browser OTLP/HTTP export from the Moblord game client (ZDX-575/576): the page is
+    // served from the laptop (localhost or its LAN/VPN address) and its JSON POSTs are
+    // preflighted, so the receiver must answer CORS. LAN-only; no credentials.
+    cors {
+      allowed_origins = [
+        "http://localhost:*",
+        "http://127.0.0.1:*",
+        "http://192.168.*",
+        "http://10.*",
+      ]
+      allowed_headers = ["Content-Type"]
+      max_age         = 7200
+    }
   }
 
   output {
@@ -52,16 +66,47 @@ otelcol.processor.batch "default" {
   output {
     metrics = [
       otelcol.exporter.otlphttp.prometheus_otlp.input,
-      otelcol.exporter.otlphttp.newrelic.input,
+      otelcol.processor.filter.newrelic_exclude.input,
     ]
     traces  = [
       otelcol.exporter.otlp.tempo.input,
-      otelcol.exporter.otlphttp.newrelic.input,
+      otelcol.processor.filter.newrelic_exclude.input,
     ]
     logs    = [
       otelcol.exporter.otlphttp.loki.input,
-      otelcol.exporter.otlphttp.newrelic.input,
+      otelcol.processor.filter.newrelic_exclude.input,
     ]
+  }
+}
+
+// Moblord game telemetry (service.name moblord-server / moblord-client) stays in the house:
+// it goes to Tempo/Loki/Prometheus above but is dropped before the New Relic exporter
+// (ZDX-575 operator decision). Everything else still reaches New Relic unchanged.
+otelcol.processor.filter "newrelic_exclude" {
+  error_mode = "ignore"
+
+  traces {
+    span = [
+      `IsMatch(resource.attributes["service.name"], "^moblord-")`,
+    ]
+  }
+
+  metrics {
+    metric = [
+      `IsMatch(resource.attributes["service.name"], "^moblord-")`,
+    ]
+  }
+
+  logs {
+    log_record = [
+      `IsMatch(resource.attributes["service.name"], "^moblord-")`,
+    ]
+  }
+
+  output {
+    metrics = [otelcol.exporter.otlphttp.newrelic.input]
+    traces  = [otelcol.exporter.otlphttp.newrelic.input]
+    logs    = [otelcol.exporter.otlphttp.newrelic.input]
   }
 }
 
