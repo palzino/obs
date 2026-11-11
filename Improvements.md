@@ -128,7 +128,9 @@ Current node_exporter → guest links:
 | minecraft | mc-server *(on-demand)* |
 | ark-server | ark *(on-demand)* |
 | proxmox hypervisor | *(none — hypervisor node)* |
-| dev-box-vm | dev-box-vm |
+| nino-dev | nino-dev |
+
+`nino-dev` is Proxmox vmid 201, previously labeled `dev-box-vm`. Node Exporter, overview, and guest reconcile alias that old label onto `nino-dev` so the rename stays one series. The Prometheus key is Alloy's `instance` / `proxmox_guest` label, not the vmid and not the OS hostname.
 
 cAdvisor mappings: internal-services, prod-apps, ark, monitoring-stack.
 

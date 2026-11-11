@@ -36,7 +36,7 @@ tools:
           value: [1779220000, "1"]
         - metric: { instance: nginx, job: prometheus.scrape.node_exporter }
           value: [1779220000, "1"]
-        - metric: { instance: dev-box-vm, job: prometheus.scrape.node_exporter }
+        - metric: { instance: nino-dev, job: prometheus.scrape.node_exporter }
           value: [1779220000, "1"]
   - name: query_prometheus
     when:

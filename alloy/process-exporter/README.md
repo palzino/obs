@@ -4,7 +4,7 @@ Deployment assets for pinned process-exporter v0.8.7 on these VMs:
 
 | VM | SSH | Exporter | Service manager |
 |---|---|---|---|
-| dev-box-vm | nino@192.168.0.131 | 192.168.0.131:9256 | systemd |
+| nino-dev (vmid 201, was dev-box-vm) | nino@192.168.0.131 | 192.168.0.131:9256 | systemd |
 | Alpine-Jellyfin / ZinoHub | root@192.168.0.33 | 192.168.0.33:9256 | OpenRC |
 
 Alloy scrapes every 15 seconds and remote-writes to Prometheus, preserving the

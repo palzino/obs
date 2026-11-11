@@ -608,7 +608,7 @@
                         "name": "prometheus"
                       },
                       "spec": {
-                        "expr": "topk(8, 100 - (avg by (instance) (rate(node_cpu_seconds_total{job=\"prometheus.scrape.node_exporter\", mode=\"idle\"}[$__rate_interval])) * 100))",
+                        "expr": "topk(8, 100 - (avg by (instance) (label_replace(rate(node_cpu_seconds_total{job=\"prometheus.scrape.node_exporter\", mode=\"idle\"}[$__rate_interval]), \"instance\", \"nino-dev\", \"instance\", \"dev-box-vm\")) * 100))",
                         "legendFormat": "{{instance}}"
                       }
                     },
@@ -696,7 +696,7 @@
                         "name": "prometheus"
                       },
                       "spec": {
-                        "expr": "topk(8, 100 * (1 - node_memory_MemAvailable_bytes{job=\"prometheus.scrape.node_exporter\"} / node_memory_MemTotal_bytes{job=\"prometheus.scrape.node_exporter\"}))",
+                        "expr": "topk(8, 100 * (1 - label_replace(label_replace(node_memory_MemAvailable_bytes{job=\"prometheus.scrape.node_exporter\"}, \"instance\", \"nino-dev\", \"instance\", \"dev-box-vm\"), \"proxmox_guest\", \"nino-dev\", \"proxmox_guest\", \"dev-box-vm\") / label_replace(label_replace(node_memory_MemTotal_bytes{job=\"prometheus.scrape.node_exporter\"}, \"instance\", \"nino-dev\", \"instance\", \"dev-box-vm\"), \"proxmox_guest\", \"nino-dev\", \"proxmox_guest\", \"dev-box-vm\")))",
                         "legendFormat": "{{instance}}"
                       }
                     },

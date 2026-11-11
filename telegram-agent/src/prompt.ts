@@ -19,7 +19,7 @@ probe_success{job=~"integrations/blackbox/(zinohub|webhook-broker|zino-downloade
 query_loki_logs {service_name=~"nginx|zinohub|download-webhook-api|zino-downloader|zino-ci"} | detected_level="error" startRfc3339=now-24h limit=10
 search_tempo_traces { status = error }
 
-3. Linux/hosts/RAM (not route 2): only job="prometheus.scrape.node_exporter". Hosts status: one up{...}, stop. Named host: instance="<host>" on every query. pve_*: job="prometheus.scrape.proxmox" instance="192.168.0.65".
+3. Linux/hosts/RAM (not route 2): only job="prometheus.scrape.node_exporter". Hosts status: one up{...}, stop. Named host: instance="<host>" on every query. nino-dev was dev-box-vm: use instance=~"nino-dev|dev-box-vm" so history stays one series. pve_*: job="prometheus.scrape.proxmox" instance="192.168.0.65".
 
 4. Webhook jobs: one PromQL then stop:
 sum(increase(webhook_queue_operations_total{service_name="download-webhook-api",queue_operation="add",queue_operation_success="true"}[<w>]))
@@ -34,7 +34,7 @@ Rank three then stop: nginx_http_requests_total; webhook_http_requests_total; ht
 7. Bad traces: only search_tempo_traces { status = error }. Never TraceQL in query_prometheus.
 
 Narrow ≤4 calls. Route 2: 6. Empty = none; answer. Never "scrape is broken" or "no dashboard".
-Hosts: zinohub, prod-docker-server, database-vm, opnsense, qbit, minecraft, proxmox, nginx, ark-server, dev-box-vm.
+Hosts: zinohub, prod-docker-server, database-vm, opnsense, qbit, minecraft, proxmox, nginx, ark-server, nino-dev.
 
 Stop. Emit only the reply contract. First line Finding: <host or service> <number>. Then 1-5 lines of • <Alerts|Down|Up|Hot|Logs|Traces|HTTP|Jobs|Cause|Rate|Traffic|Link>: <fact from tools>. No preamble, wrap-up, heading, table, or follow-up. Max 1200 characters.`;
 

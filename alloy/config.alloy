@@ -275,9 +275,11 @@ prometheus.scrape "node_exporter" {
       on_demand      = "true",
     },
     {
+      // Series key is this label, not Proxmox vmid 201 and not the OS hostname.
+      // The previous label was dev-box-vm; dashboards alias those samples onto nino-dev.
       __address__    = "192.168.0.131:9100",
-      instance       = "dev-box-vm",
-      proxmox_guest  = "dev-box-vm",
+      instance       = "nino-dev",
+      proxmox_guest  = "nino-dev",
     },
   ]
   forward_to = [prometheus.remote_write.default.receiver]
@@ -289,8 +291,8 @@ prometheus.scrape "process_exporter" {
   targets = [
     {
       __address__   = "192.168.0.131:9256",
-      instance      = "dev-box-vm",
-      proxmox_guest = "dev-box-vm",
+      instance      = "nino-dev",
+      proxmox_guest = "nino-dev",
     },
     {
       __address__   = "192.168.0.33:9256",

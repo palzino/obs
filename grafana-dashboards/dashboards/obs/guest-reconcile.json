@@ -31,7 +31,7 @@
       }
     ],
     "cursorSync": "Crosshair",
-    "description": "Compare Proxmox-reported guest CPU/memory (InfluxDB, PVE metric server) with node exporter (inside the VM) and cAdvisor container totals. Select a Proxmox guest \u2014 node and cAdvisor targets are linked automatically via the proxmox_guest label in Alloy.",
+    "description": "Compare Proxmox-reported guest CPU/memory (InfluxDB, PVE metric server) with node exporter (inside the VM) and cAdvisor container totals. Select a Proxmox guest \u2014 node and cAdvisor targets are linked automatically via the proxmox_guest label in Alloy. nino-dev (Proxmox vmid 201) includes series formerly labeled dev-box-vm.",
     "editable": true,
     "elements": {
       "panel-1": {
@@ -55,7 +55,7 @@
                         "name": "eev3nrqve78cgf"
                       },
                       "spec": {
-                        "query": "from(bucket: \"proxmox\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"system\" and r.object != \"nodes\" and r.host == \"${guest}\" and r._field == \"status\")\n  |> last()\n  |> group()\n  |> keep(columns: [\"_time\", \"_value\"])"
+                        "query": "from(bucket: \"proxmox\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"system\" and r.object != \"nodes\" and r.host =~ /^(${guest:raw})$/ and r._field == \"status\")\n  |> last()\n  |> group()\n  |> keep(columns: [\"_time\", \"_value\"])"
                       }
                     },
                     "refId": "A",
@@ -150,7 +150,7 @@
                         "name": "prometheus"
                       },
                       "spec": {
-                        "expr": "node_memory_MemTotal_bytes{job=\"prometheus.scrape.node_exporter\", proxmox_guest=\"$guest\"} - node_memory_MemAvailable_bytes{job=\"prometheus.scrape.node_exporter\", proxmox_guest=\"$guest\"}",
+                        "expr": "label_replace(label_replace(node_memory_MemTotal_bytes{job=\"prometheus.scrape.node_exporter\", proxmox_guest=~\"^(${guest})$\"} - node_memory_MemAvailable_bytes{job=\"prometheus.scrape.node_exporter\", proxmox_guest=~\"^(${guest})$\"}, \"instance\", \"nino-dev\", \"instance\", \"dev-box-vm\"), \"proxmox_guest\", \"nino-dev\", \"proxmox_guest\", \"dev-box-vm\")",
                         "legendFormat": "Node used"
                       }
                     },
@@ -226,7 +226,7 @@
                         "name": "prometheus"
                       },
                       "spec": {
-                        "expr": "sum(container_memory_rss{job=\"cadvisor\", proxmox_guest=\"$guest\", name=~\".+\"})",
+                        "expr": "label_replace(label_replace(sum(container_memory_rss{job=\"cadvisor\", proxmox_guest=~\"^(${guest})$\", name=~\".+\"}), \"instance\", \"nino-dev\", \"instance\", \"dev-box-vm\"), \"proxmox_guest\", \"nino-dev\", \"proxmox_guest\", \"dev-box-vm\")",
                         "legendFormat": "cAdvisor RSS"
                       }
                     },
@@ -302,7 +302,7 @@
                         "name": "eev3nrqve78cgf"
                       },
                       "spec": {
-                        "query": "from(bucket: \"proxmox\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"system\" and r.object != \"nodes\" and r.host == \"${guest}\" and r._field == \"mem\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> group()\n  |> keep(columns: [\"_time\", \"_value\"])\n  |> rename(columns: {_value: \"Proxmox used\"})"
+                        "query": "from(bucket: \"proxmox\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"system\" and r.object != \"nodes\" and r.host =~ /^(${guest:raw})$/ and r._field == \"mem\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> group()\n  |> keep(columns: [\"_time\", \"_value\"])\n  |> rename(columns: {_value: \"Proxmox used\"})"
                       }
                     },
                     "refId": "A",
@@ -320,7 +320,7 @@
                         "name": "prometheus"
                       },
                       "spec": {
-                        "expr": "node_memory_MemTotal_bytes{job=\"prometheus.scrape.node_exporter\", proxmox_guest=\"$guest\"} - node_memory_MemAvailable_bytes{job=\"prometheus.scrape.node_exporter\", proxmox_guest=\"$guest\"}",
+                        "expr": "label_replace(label_replace(node_memory_MemTotal_bytes{job=\"prometheus.scrape.node_exporter\", proxmox_guest=~\"^(${guest})$\"} - node_memory_MemAvailable_bytes{job=\"prometheus.scrape.node_exporter\", proxmox_guest=~\"^(${guest})$\"}, \"instance\", \"nino-dev\", \"instance\", \"dev-box-vm\"), \"proxmox_guest\", \"nino-dev\", \"proxmox_guest\", \"dev-box-vm\")",
                         "legendFormat": "Node used"
                       }
                     },
@@ -339,7 +339,7 @@
                         "name": "prometheus"
                       },
                       "spec": {
-                        "expr": "sum(container_memory_rss{job=\"cadvisor\", proxmox_guest=\"$guest\", name=~\".+\"})",
+                        "expr": "label_replace(label_replace(sum(container_memory_rss{job=\"cadvisor\", proxmox_guest=~\"^(${guest})$\", name=~\".+\"}), \"instance\", \"nino-dev\", \"instance\", \"dev-box-vm\"), \"proxmox_guest\", \"nino-dev\", \"proxmox_guest\", \"dev-box-vm\")",
                         "legendFormat": "cAdvisor RSS"
                       }
                     },
@@ -490,7 +490,7 @@
                         "name": "prometheus"
                       },
                       "spec": {
-                        "expr": "sum(container_memory_rss{job=\"cadvisor\", proxmox_guest=\"$guest\", name=~\".+\"}) - on() group_left() (node_memory_MemTotal_bytes{job=\"prometheus.scrape.node_exporter\", proxmox_guest=\"$guest\"} - node_memory_MemAvailable_bytes{job=\"prometheus.scrape.node_exporter\", proxmox_guest=\"$guest\"})",
+                        "expr": "label_replace(label_replace(sum(container_memory_rss{job=\"cadvisor\", proxmox_guest=~\"^(${guest})$\", name=~\".+\"}) - on() group_left() (node_memory_MemTotal_bytes{job=\"prometheus.scrape.node_exporter\", proxmox_guest=~\"^(${guest})$\"} - node_memory_MemAvailable_bytes{job=\"prometheus.scrape.node_exporter\", proxmox_guest=~\"^(${guest})$\"}), \"instance\", \"nino-dev\", \"instance\", \"dev-box-vm\"), \"proxmox_guest\", \"nino-dev\", \"proxmox_guest\", \"dev-box-vm\")",
                         "legendFormat": "cAdvisor RSS - Node used"
                       }
                     },
@@ -509,7 +509,7 @@
                         "name": "eev3nrqve78cgf"
                       },
                       "spec": {
-                        "query": "from(bucket: \"proxmox\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"system\" and r.object != \"nodes\" and r.host == \"${guest}\" and r._field == \"mem\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> group()\n  |> keep(columns: [\"_time\", \"_value\"])"
+                        "query": "from(bucket: \"proxmox\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"system\" and r.object != \"nodes\" and r.host =~ /^(${guest:raw})$/ and r._field == \"mem\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> group()\n  |> keep(columns: [\"_time\", \"_value\"])"
                       }
                     },
                     "refId": "P",
@@ -527,7 +527,7 @@
                         "name": "prometheus"
                       },
                       "spec": {
-                        "expr": "node_memory_MemTotal_bytes{job=\"prometheus.scrape.node_exporter\", proxmox_guest=\"$guest\"} - node_memory_MemAvailable_bytes{job=\"prometheus.scrape.node_exporter\", proxmox_guest=\"$guest\"}"
+                        "expr": "label_replace(label_replace(node_memory_MemTotal_bytes{job=\"prometheus.scrape.node_exporter\", proxmox_guest=~\"^(${guest})$\"} - node_memory_MemAvailable_bytes{job=\"prometheus.scrape.node_exporter\", proxmox_guest=~\"^(${guest})$\"}, \"instance\", \"nino-dev\", \"instance\", \"dev-box-vm\"), \"proxmox_guest\", \"nino-dev\", \"proxmox_guest\", \"dev-box-vm\")"
                       }
                     },
                     "refId": "N",
@@ -681,7 +681,7 @@
                         "name": "prometheus"
                       },
                       "spec": {
-                        "expr": "(100 * sum(rate(container_cpu_usage_seconds_total{job=\"cadvisor\", proxmox_guest=\"$guest\", name=~\".+\"}[$__rate_interval])) / clamp_min(count(count by (cpu) (node_cpu_seconds_total{job=\"prometheus.scrape.node_exporter\", proxmox_guest=\"$guest\", mode=\"idle\"})), 1)) - on() group_left() (100 - (avg(rate(node_cpu_seconds_total{job=\"prometheus.scrape.node_exporter\", proxmox_guest=\"$guest\", mode=\"idle\"}[$__rate_interval])) * 100))",
+                        "expr": "label_replace(label_replace((100 * sum(rate(container_cpu_usage_seconds_total{job=\"cadvisor\", proxmox_guest=~\"^(${guest})$\", name=~\".+\"}[$__rate_interval])) / clamp_min(count(count by (cpu) (node_cpu_seconds_total{job=\"prometheus.scrape.node_exporter\", proxmox_guest=~\"^(${guest})$\", mode=\"idle\"})), 1)) - on() group_left() (100 - (avg(rate(node_cpu_seconds_total{job=\"prometheus.scrape.node_exporter\", proxmox_guest=~\"^(${guest})$\", mode=\"idle\"}[$__rate_interval])) * 100)), \"instance\", \"nino-dev\", \"instance\", \"dev-box-vm\"), \"proxmox_guest\", \"nino-dev\", \"proxmox_guest\", \"dev-box-vm\")",
                         "legendFormat": "cAdvisor - Node"
                       }
                     },
@@ -700,7 +700,7 @@
                         "name": "eev3nrqve78cgf"
                       },
                       "spec": {
-                        "query": "from(bucket: \"proxmox\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"system\" and r.object != \"nodes\" and r.host == \"${guest}\" and r._field == \"cpu\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> group()\n  |> keep(columns: [\"_time\", \"_value\"])\n  |> map(fn: (r) => ({r with _value: float(v: r._value) * 100.0}))"
+                        "query": "from(bucket: \"proxmox\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"system\" and r.object != \"nodes\" and r.host =~ /^(${guest:raw})$/ and r._field == \"cpu\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> group()\n  |> keep(columns: [\"_time\", \"_value\"])\n  |> map(fn: (r) => ({r with _value: float(v: r._value) * 100.0}))"
                       }
                     },
                     "refId": "P",
@@ -718,7 +718,7 @@
                         "name": "prometheus"
                       },
                       "spec": {
-                        "expr": "(100 - (avg(rate(node_cpu_seconds_total{job=\"prometheus.scrape.node_exporter\", proxmox_guest=\"$guest\", mode=\"idle\"}[$__rate_interval])) * 100))"
+                        "expr": "label_replace(label_replace((100 - (avg(rate(node_cpu_seconds_total{job=\"prometheus.scrape.node_exporter\", proxmox_guest=~\"^(${guest})$\", mode=\"idle\"}[$__rate_interval])) * 100)), \"instance\", \"nino-dev\", \"instance\", \"dev-box-vm\"), \"proxmox_guest\", \"nino-dev\", \"proxmox_guest\", \"dev-box-vm\")"
                       }
                     },
                     "refId": "N",
@@ -853,7 +853,7 @@
                         "name": "prometheus"
                       },
                       "spec": {
-                        "expr": "sum(rate(container_cpu_usage_seconds_total{job=\"cadvisor\", proxmox_guest=\"$guest\", name=~\".+\"}[$__rate_interval])) by (name) * 100",
+                        "expr": "label_replace(label_replace(sum(rate(container_cpu_usage_seconds_total{job=\"cadvisor\", proxmox_guest=~\"^(${guest})$\", name=~\".+\"}[$__rate_interval])) by (name) * 100, \"instance\", \"nino-dev\", \"instance\", \"dev-box-vm\"), \"proxmox_guest\", \"nino-dev\", \"proxmox_guest\", \"dev-box-vm\")",
                         "format": "table",
                         "instant": true,
                         "legendFormat": "__auto"
@@ -874,7 +874,7 @@
                         "name": "prometheus"
                       },
                       "spec": {
-                        "expr": "sum(container_memory_rss{job=\"cadvisor\", proxmox_guest=\"$guest\", name=~\".+\"}) by (name)",
+                        "expr": "label_replace(label_replace(sum(container_memory_rss{job=\"cadvisor\", proxmox_guest=~\"^(${guest})$\", name=~\".+\"}) by (name), \"instance\", \"nino-dev\", \"instance\", \"dev-box-vm\"), \"proxmox_guest\", \"nino-dev\", \"proxmox_guest\", \"dev-box-vm\")",
                         "format": "table",
                         "instant": true,
                         "legendFormat": "__auto"
@@ -895,7 +895,7 @@
                         "name": "prometheus"
                       },
                       "spec": {
-                        "expr": "max by (name) ((time() - container_start_time_seconds{job=\"cadvisor\", proxmox_guest=\"$guest\", name=~\".+\"}) / 86400)",
+                        "expr": "label_replace(label_replace(max by (name) ((time() - container_start_time_seconds{job=\"cadvisor\", proxmox_guest=~\"^(${guest})$\", name=~\".+\"}) / 86400), \"instance\", \"nino-dev\", \"instance\", \"dev-box-vm\"), \"proxmox_guest\", \"nino-dev\", \"proxmox_guest\", \"dev-box-vm\")",
                         "format": "table",
                         "instant": true,
                         "legendFormat": "__auto"
@@ -1057,7 +1057,7 @@
                         "name": "prometheus"
                       },
                       "spec": {
-                        "expr": "sum(rate(container_cpu_usage_seconds_total{job=\"cadvisor\", proxmox_guest=\"$guest\", name=~\".+\"}[$__rate_interval])) by (name) * 100",
+                        "expr": "label_replace(label_replace(sum(rate(container_cpu_usage_seconds_total{job=\"cadvisor\", proxmox_guest=~\"^(${guest})$\", name=~\".+\"}[$__rate_interval])) by (name) * 100, \"instance\", \"nino-dev\", \"instance\", \"dev-box-vm\"), \"proxmox_guest\", \"nino-dev\", \"proxmox_guest\", \"dev-box-vm\")",
                         "legendFormat": "{{name}}"
                       }
                     },
@@ -1135,7 +1135,7 @@
                         "name": "prometheus"
                       },
                       "spec": {
-                        "expr": "sum(container_memory_rss{job=\"cadvisor\", proxmox_guest=\"$guest\", name=~\".+\"}) by (name)",
+                        "expr": "label_replace(label_replace(sum(container_memory_rss{job=\"cadvisor\", proxmox_guest=~\"^(${guest})$\", name=~\".+\"}) by (name), \"instance\", \"nino-dev\", \"instance\", \"dev-box-vm\"), \"proxmox_guest\", \"nino-dev\", \"proxmox_guest\", \"dev-box-vm\")",
                         "legendFormat": "{{name}}"
                       }
                     },
@@ -1216,7 +1216,7 @@
                   "showLineNumbers": false,
                   "showMiniMap": false
                 },
-                "content": "**How to use:** pick a Proxmox guest \u2014 Alloy links node exporter and cAdvisor via the `proxmox_guest` label.\n\n| Guest | Node instance | cAdvisor |\n|---|---|---|\n| [internal-services](?var-guest=internal-services) | database-vm | yes |\n| [prod-apps](?var-guest=prod-apps) | prod-docker-server | yes |\n| [monitoring-stack](?var-guest=monitoring-stack) | \u2014 | yes (local cadvisor) |\n| [Alpine-Jellyfin](?var-guest=Alpine-Jellyfin) | zinohub (192.168.0.33) | **no** \u2014 Docker runs on the VM but cAdvisor is not deployed there |\n| [qbit-linux](?var-guest=qbit-linux) | qbit | no |\n| [ark](?var-guest=ark) | ark-server (on-demand) | yes |\n| [mc-server](?var-guest=mc-server) | minecraft (on-demand) | no |\n| [ng-alpine](?var-guest=ng-alpine) | nginx | no |\n\nProxmox guest CPU is % of allocated vCPUs. Node exporter CPU is % of all VM cores. cAdvisor CPU is container CPU summed and normalized to VM core count.",
+                "content": "**How to use:** pick a Proxmox guest \u2014 Alloy links node exporter and cAdvisor via the `proxmox_guest` label.\n\n| Guest | Node instance | cAdvisor |\n|---|---|---|\n| [internal-services](?var-guest=internal-services) | database-vm | yes |\n| [prod-apps](?var-guest=prod-apps) | prod-docker-server | yes |\n| [monitoring-stack](?var-guest=monitoring-stack) | \u2014 | yes (local cadvisor) |\n| [Alpine-Jellyfin](?var-guest=Alpine-Jellyfin) | zinohub (192.168.0.33) | **no** \u2014 Docker runs on the VM but cAdvisor is not deployed there |\n| [qbit-linux](?var-guest=qbit-linux) | qbit | no |\n| [ark](?var-guest=ark) | ark-server (on-demand) | yes |\n| [mc-server](?var-guest=mc-server) | minecraft (on-demand) | no |\n| [ng-alpine](?var-guest=ng-alpine) | nginx | no |\n| [nino-dev](?var-guest=nino-dev%7Cdev-box-vm) | nino-dev (vmid 201, was dev-box-vm) | no |\n\nProxmox guest CPU is % of allocated vCPUs. Node exporter CPU is % of all VM cores. cAdvisor CPU is container CPU summed and normalized to VM core count.",
                 "mode": "markdown"
               },
               "fieldConfig": {
@@ -1248,7 +1248,7 @@
                         "name": "prometheus"
                       },
                       "spec": {
-                        "expr": "up{job=\"prometheus.scrape.node_exporter\", proxmox_guest=\"$guest\"}",
+                        "expr": "label_replace(label_replace(up{job=\"prometheus.scrape.node_exporter\", proxmox_guest=~\"^(${guest})$\"}, \"instance\", \"nino-dev\", \"instance\", \"dev-box-vm\"), \"proxmox_guest\", \"nino-dev\", \"proxmox_guest\", \"dev-box-vm\")",
                         "legendFormat": "{{instance}}"
                       }
                     },
@@ -1348,7 +1348,7 @@
                         "name": "eev3nrqve78cgf"
                       },
                       "spec": {
-                        "query": "from(bucket: \"proxmox\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"system\" and r.object != \"nodes\" and r.host == \"${guest}\" and r._field == \"status\")\n  |> last()\n  |> group()\n  |> map(fn: (r) => ({_time: r._time, _value: r.object}))"
+                        "query": "from(bucket: \"proxmox\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"system\" and r.object != \"nodes\" and r.host =~ /^(${guest:raw})$/ and r._field == \"status\")\n  |> last()\n  |> group()\n  |> map(fn: (r) => ({_time: r._time, _value: r.object}))"
                       }
                     },
                     "refId": "A",
@@ -1437,7 +1437,7 @@
                         "name": "prometheus"
                       },
                       "spec": {
-                        "expr": "up{job=\"cadvisor\", proxmox_guest=\"$guest\"}",
+                        "expr": "label_replace(label_replace(up{job=\"cadvisor\", proxmox_guest=~\"^(${guest})$\"}, \"instance\", \"nino-dev\", \"instance\", \"dev-box-vm\"), \"proxmox_guest\", \"nino-dev\", \"proxmox_guest\", \"dev-box-vm\")",
                         "legendFormat": "cadvisor"
                       }
                     },
@@ -1537,7 +1537,7 @@
                         "name": "eev3nrqve78cgf"
                       },
                       "spec": {
-                        "query": "from(bucket: \"proxmox\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"system\" and r.object != \"nodes\" and r.host == \"${guest}\" and r._field == \"cpus\")\n  |> last()\n  |> group()\n  |> keep(columns: [\"_time\", \"_value\"])"
+                        "query": "from(bucket: \"proxmox\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"system\" and r.object != \"nodes\" and r.host =~ /^(${guest:raw})$/ and r._field == \"cpus\")\n  |> last()\n  |> group()\n  |> keep(columns: [\"_time\", \"_value\"])"
                       }
                     },
                     "refId": "A",
@@ -1613,7 +1613,7 @@
                         "name": "eev3nrqve78cgf"
                       },
                       "spec": {
-                        "query": "from(bucket: \"proxmox\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"system\" and r.object != \"nodes\" and r.host == \"${guest}\" and r._field == \"maxmem\")\n  |> last()\n  |> group()\n  |> keep(columns: [\"_time\", \"_value\"])"
+                        "query": "from(bucket: \"proxmox\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"system\" and r.object != \"nodes\" and r.host =~ /^(${guest:raw})$/ and r._field == \"maxmem\")\n  |> last()\n  |> group()\n  |> keep(columns: [\"_time\", \"_value\"])"
                       }
                     },
                     "refId": "A",
@@ -1689,7 +1689,7 @@
                         "name": "eev3nrqve78cgf"
                       },
                       "spec": {
-                        "query": "from(bucket: \"proxmox\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"system\" and r.object != \"nodes\" and r.host == \"${guest}\" and r._field == \"cpu\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> group()\n  |> keep(columns: [\"_time\", \"_value\"])\n  |> map(fn: (r) => ({r with _value: float(v: r._value) * 100.0}))"
+                        "query": "from(bucket: \"proxmox\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"system\" and r.object != \"nodes\" and r.host =~ /^(${guest:raw})$/ and r._field == \"cpu\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> group()\n  |> keep(columns: [\"_time\", \"_value\"])\n  |> map(fn: (r) => ({r with _value: float(v: r._value) * 100.0}))"
                       }
                     },
                     "refId": "A",
@@ -1774,7 +1774,7 @@
                         "name": "prometheus"
                       },
                       "spec": {
-                        "expr": "100 - (avg(rate(node_cpu_seconds_total{job=\"prometheus.scrape.node_exporter\", proxmox_guest=\"$guest\", mode=\"idle\"}[$__rate_interval])) * 100)",
+                        "expr": "label_replace(label_replace(100 - (avg(rate(node_cpu_seconds_total{job=\"prometheus.scrape.node_exporter\", proxmox_guest=~\"^(${guest})$\", mode=\"idle\"}[$__rate_interval])) * 100), \"instance\", \"nino-dev\", \"instance\", \"dev-box-vm\"), \"proxmox_guest\", \"nino-dev\", \"proxmox_guest\", \"dev-box-vm\")",
                         "legendFormat": "Node"
                       }
                     },
@@ -1860,7 +1860,7 @@
                         "name": "prometheus"
                       },
                       "spec": {
-                        "expr": "100 * sum(rate(container_cpu_usage_seconds_total{job=\"cadvisor\", proxmox_guest=\"$guest\", name=~\".+\"}[$__rate_interval])) / clamp_min(count(count by (cpu) (node_cpu_seconds_total{job=\"prometheus.scrape.node_exporter\", proxmox_guest=\"$guest\", mode=\"idle\"})), 1)",
+                        "expr": "label_replace(label_replace(100 * sum(rate(container_cpu_usage_seconds_total{job=\"cadvisor\", proxmox_guest=~\"^(${guest})$\", name=~\".+\"}[$__rate_interval])) / clamp_min(count(count by (cpu) (node_cpu_seconds_total{job=\"prometheus.scrape.node_exporter\", proxmox_guest=~\"^(${guest})$\", mode=\"idle\"})), 1), \"instance\", \"nino-dev\", \"instance\", \"dev-box-vm\"), \"proxmox_guest\", \"nino-dev\", \"proxmox_guest\", \"dev-box-vm\")",
                         "legendFormat": "cAdvisor"
                       }
                     },
@@ -1945,7 +1945,7 @@
                         "name": "eev3nrqve78cgf"
                       },
                       "spec": {
-                        "query": "from(bucket: \"proxmox\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"system\" and r.object != \"nodes\" and r.host == \"${guest}\" and r._field == \"cpu\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> group()\n  |> keep(columns: [\"_time\", \"_value\"])\n  |> map(fn: (r) => ({r with _value: float(v: r._value) * 100.0}))\n  |> rename(columns: {_value: \"Proxmox\"})"
+                        "query": "from(bucket: \"proxmox\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"system\" and r.object != \"nodes\" and r.host =~ /^(${guest:raw})$/ and r._field == \"cpu\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> group()\n  |> keep(columns: [\"_time\", \"_value\"])\n  |> map(fn: (r) => ({r with _value: float(v: r._value) * 100.0}))\n  |> rename(columns: {_value: \"Proxmox\"})"
                       }
                     },
                     "refId": "A",
@@ -1963,7 +1963,7 @@
                         "name": "prometheus"
                       },
                       "spec": {
-                        "expr": "100 - (avg(rate(node_cpu_seconds_total{job=\"prometheus.scrape.node_exporter\", proxmox_guest=\"$guest\", mode=\"idle\"}[$__rate_interval])) * 100)",
+                        "expr": "label_replace(label_replace(100 - (avg(rate(node_cpu_seconds_total{job=\"prometheus.scrape.node_exporter\", proxmox_guest=~\"^(${guest})$\", mode=\"idle\"}[$__rate_interval])) * 100), \"instance\", \"nino-dev\", \"instance\", \"dev-box-vm\"), \"proxmox_guest\", \"nino-dev\", \"proxmox_guest\", \"dev-box-vm\")",
                         "legendFormat": "Node exporter"
                       }
                     },
@@ -1982,7 +1982,7 @@
                         "name": "prometheus"
                       },
                       "spec": {
-                        "expr": "100 * sum(rate(container_cpu_usage_seconds_total{job=\"cadvisor\", proxmox_guest=\"$guest\", name=~\".+\"}[$__rate_interval])) / clamp_min(count(count by (cpu) (node_cpu_seconds_total{job=\"prometheus.scrape.node_exporter\", proxmox_guest=\"$guest\", mode=\"idle\"})), 1)",
+                        "expr": "label_replace(label_replace(100 * sum(rate(container_cpu_usage_seconds_total{job=\"cadvisor\", proxmox_guest=~\"^(${guest})$\", name=~\".+\"}[$__rate_interval])) / clamp_min(count(count by (cpu) (node_cpu_seconds_total{job=\"prometheus.scrape.node_exporter\", proxmox_guest=~\"^(${guest})$\", mode=\"idle\"})), 1), \"instance\", \"nino-dev\", \"instance\", \"dev-box-vm\"), \"proxmox_guest\", \"nino-dev\", \"proxmox_guest\", \"dev-box-vm\")",
                         "legendFormat": "cAdvisor total"
                       }
                     },
@@ -2116,7 +2116,7 @@
                         "name": "eev3nrqve78cgf"
                       },
                       "spec": {
-                        "query": "from(bucket: \"proxmox\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"system\" and r.object != \"nodes\" and r.host == \"${guest}\" and r._field == \"mem\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> group()\n  |> keep(columns: [\"_time\", \"_value\"])"
+                        "query": "from(bucket: \"proxmox\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"system\" and r.object != \"nodes\" and r.host =~ /^(${guest:raw})$/ and r._field == \"mem\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> group()\n  |> keep(columns: [\"_time\", \"_value\"])"
                       }
                     },
                     "refId": "A",
@@ -2715,14 +2715,14 @@
               "name": "prometheus"
             },
             "spec": {
-              "qryType": 1,
-              "query": "label_values(up{proxmox_guest!=\"\"}, proxmox_guest)",
+              "qryType": 3,
+              "query": "query_result(label_replace(label_replace(label_replace(label_replace(up{proxmox_guest!=\"\"}, \"guest_re\", \"$$1\", \"proxmox_guest\", \"(.+)\"), \"guest_name\", \"$$1\", \"proxmox_guest\", \"(.+)\"), \"guest_re\", \"nino-dev|dev-box-vm\", \"proxmox_guest\", \"nino-dev|dev-box-vm\"), \"guest_name\", \"nino-dev\", \"proxmox_guest\", \"nino-dev|dev-box-vm\"))",
               "refId": "PrometheusVariableQueryEditor-VariableQuery"
             }
           },
-          "regex": "",
+          "regex": "/guest_name=\"(?<text>[^\"]+)|guest_re=\"(?<value>[^\"]+)/g",
           "sort": "alphabeticalAsc",
-          "definition": "label_values(up{proxmox_guest!=\"\"}, proxmox_guest)",
+          "definition": "query_result(label_replace(label_replace(label_replace(label_replace(up{proxmox_guest!=\"\"}, \"guest_re\", \"$$1\", \"proxmox_guest\", \"(.+)\"), \"guest_name\", \"$$1\", \"proxmox_guest\", \"(.+)\"), \"guest_re\", \"nino-dev|dev-box-vm\", \"proxmox_guest\", \"nino-dev|dev-box-vm\"), \"guest_name\", \"nino-dev\", \"proxmox_guest\", \"nino-dev|dev-box-vm\"))",
           "options": [],
           "multi": false,
           "includeAll": false,
