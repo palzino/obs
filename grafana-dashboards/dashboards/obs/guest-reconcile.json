@@ -2716,13 +2716,13 @@
             },
             "spec": {
               "qryType": 3,
-              "query": "query_result(label_replace(label_replace(label_replace(label_replace(up{proxmox_guest!=\"\"}, \"guest_re\", \"$$1\", \"proxmox_guest\", \"(.+)\"), \"guest_name\", \"$$1\", \"proxmox_guest\", \"(.+)\"), \"guest_re\", \"nino-dev|dev-box-vm\", \"proxmox_guest\", \"nino-dev|dev-box-vm\"), \"guest_name\", \"nino-dev\", \"proxmox_guest\", \"nino-dev|dev-box-vm\"))",
+              "query": "query_result(label_replace(label_replace(label_replace(label_replace(up{proxmox_guest!=\"\"}, \"guest_re\", \"$1\", \"proxmox_guest\", \"(.+)\"), \"guest_name\", \"$1\", \"proxmox_guest\", \"(.+)\"), \"guest_re\", \"nino-dev|dev-box-vm\", \"proxmox_guest\", \"nino-dev|dev-box-vm\"), \"guest_name\", \"nino-dev\", \"proxmox_guest\", \"nino-dev|dev-box-vm\"))",
               "refId": "PrometheusVariableQueryEditor-VariableQuery"
             }
           },
           "regex": "/guest_name=\"(?<text>[^\"]+)|guest_re=\"(?<value>[^\"]+)/g",
           "sort": "alphabeticalAsc",
-          "definition": "query_result(label_replace(label_replace(label_replace(label_replace(up{proxmox_guest!=\"\"}, \"guest_re\", \"$$1\", \"proxmox_guest\", \"(.+)\"), \"guest_name\", \"$$1\", \"proxmox_guest\", \"(.+)\"), \"guest_re\", \"nino-dev|dev-box-vm\", \"proxmox_guest\", \"nino-dev|dev-box-vm\"), \"guest_name\", \"nino-dev\", \"proxmox_guest\", \"nino-dev|dev-box-vm\"))",
+          "definition": "query_result(label_replace(label_replace(label_replace(label_replace(up{proxmox_guest!=\"\"}, \"guest_re\", \"$1\", \"proxmox_guest\", \"(.+)\"), \"guest_name\", \"$1\", \"proxmox_guest\", \"(.+)\"), \"guest_re\", \"nino-dev|dev-box-vm\", \"proxmox_guest\", \"nino-dev|dev-box-vm\"), \"guest_name\", \"nino-dev\", \"proxmox_guest\", \"nino-dev|dev-box-vm\"))",
           "options": [],
           "multi": false,
           "includeAll": false,
