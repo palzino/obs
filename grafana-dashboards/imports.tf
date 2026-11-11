@@ -15,3 +15,8 @@ import {
   to = grafana_dashboard.obs["guest-reconcile.json"]
   id = "1:obs-guest-reconcile"
 }
+
+import {
+  to = grafana_dashboard.obs["moblord-compute.json"]
+  id = "1:moblord-compute"
+}

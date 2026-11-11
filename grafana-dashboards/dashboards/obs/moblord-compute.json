@@ -1,0 +1,2774 @@
+{
+  "uid": "moblord-compute",
+  "apiVersion": "dashboard.grafana.app/v2",
+  "kind": "Dashboard",
+  "metadata": {
+    "name": "moblord-compute"
+  },
+  "spec": {
+    "title": "moblord compute",
+    "description": "Agent and compute telemetry for tuning the setup: the CI run ledger, the host snapshots and the test history (job moblord-ci in Loki; ops/telemetry/README.md), node_exporter and T3 Code's own metrics. One row per question; `pnpm compute:report` is the same data as a weekly text report with suggestions.",
+    "tags": ["moblord", "ci", "compute"],
+    "editable": true,
+    "cursorSync": "Crosshair",
+    "liveNow": false,
+    "preload": false,
+    "links": [],
+    "annotations": [],
+    "timeSettings": {
+      "autoRefresh": "1m",
+      "autoRefreshIntervals": ["1m", "5m", "15m", "1h"],
+      "fiscalYearStartMonth": 0,
+      "from": "now-24h",
+      "hideTimepicker": false,
+      "timezone": "browser",
+      "to": "now"
+    },
+    "variables": [],
+    "elements": {
+      "panel-1": {
+        "kind": "Panel",
+        "spec": {
+          "id": 1,
+          "title": "CI wall time by tier and host kind",
+          "description": "Hours of ci:check and check:fast wall time per interval, from the run ledger (scripts/run-ledger.mjs). Host kind is local, boat-warm (a reused VM) or boat-fresh (a new VM). Back-filled runs carry no wall time.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "sum by (kind, tier, host_kind) (sum_over_time({job=\"moblord-ci\", stream=\"runs\"} | kind=~`ci:check|check:fast` | json v=\"wallS\" | unwrap v [$__auto])) / 3600",
+                        "queryType": "range",
+                        "legendFormat": "{{kind}} {{tier}} {{host_kind}}"
+                      }
+                    }
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "13.2.4",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "noValue": "No data",
+                  "unit": "h",
+                  "custom": {
+                    "drawStyle": "bars",
+                    "fillOpacity": 70,
+                    "lineWidth": 1,
+                    "stacking": {
+                      "mode": "normal",
+                      "group": "A"
+                    }
+                  }
+                },
+                "overrides": []
+              },
+              "options": {
+                "legend": {
+                  "displayMode": "table",
+                  "placement": "bottom",
+                  "calcs": ["lastNotNull", "max"]
+                },
+                "tooltip": {
+                  "mode": "multi"
+                }
+              }
+            }
+          }
+        }
+      },
+      "panel-2": {
+        "kind": "Panel",
+        "spec": {
+          "id": 2,
+          "title": "Runs and outcome by tier and host",
+          "description": "Run count over the selected range by kind, tier, host kind and exit code (0 passed; back-filled runs have no exit code).",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "sum by (kind, tier, host_kind, host, exit) (count_over_time({job=\"moblord-ci\", stream=\"runs\"} | kind=~`ci:check|check:fast` [$__range]))",
+                        "queryType": "instant"
+                      }
+                    }
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": [
+                {
+                  "kind": "reduce",
+                  "spec": {
+                    "id": "reduce",
+                    "options": {
+                      "reducers": ["lastNotNull"]
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "table",
+            "version": "13.2.4",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "noValue": "No data",
+                  "unit": "short"
+                },
+                "overrides": []
+              },
+              "options": {}
+            }
+          }
+        }
+      },
+      "panel-3": {
+        "kind": "Panel",
+        "spec": {
+          "id": 3,
+          "title": "CI wall time by agent thread",
+          "description": "Minutes of ci:check and check:fast wall time per agent thread over the selected range, with its model, ticket and checkout. Thread IDs are T3CODE_THREAD_ID.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "topk(20, sum by (thread, model, ticket, worktree) (sum_over_time({job=\"moblord-ci\", stream=\"runs\"} | kind=~`ci:check|check:fast` | thread!=`` | json v=\"wallS\" | unwrap v [$__range]))) / 60",
+                        "queryType": "instant"
+                      }
+                    }
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": [
+                {
+                  "kind": "reduce",
+                  "spec": {
+                    "id": "reduce",
+                    "options": {
+                      "reducers": ["lastNotNull"]
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "table",
+            "version": "13.2.4",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "noValue": "No data",
+                  "unit": "m"
+                },
+                "overrides": []
+              },
+              "options": {}
+            }
+          }
+        }
+      },
+      "panel-4": {
+        "kind": "Panel",
+        "spec": {
+          "id": 4,
+          "title": "CI slot wait (local runs)",
+          "description": "Seconds a local ci:check waited for a machine-wide CI slot (scripts/ci-gate.mjs): the longest and the average per interval, by host.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "max by (host) (max_over_time({job=\"moblord-ci\", stream=\"runs\"} | kind=`ci:check` | host_kind=`local` | json v=\"slotWaitS\" | unwrap v [$__auto]))",
+                        "queryType": "range",
+                        "legendFormat": "max {{host}}"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "B",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "avg by (host) (avg_over_time({job=\"moblord-ci\", stream=\"runs\"} | kind=`ci:check` | host_kind=`local` | json v=\"slotWaitS\" | unwrap v [$__auto]))",
+                        "queryType": "range",
+                        "legendFormat": "avg {{host}}"
+                      }
+                    }
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "13.2.4",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "noValue": "No data",
+                  "unit": "s",
+                  "custom": {
+                    "drawStyle": "line",
+                    "fillOpacity": 10,
+                    "lineWidth": 2,
+                    "showPoints": "never",
+                    "spanNulls": true
+                  }
+                },
+                "overrides": []
+              },
+              "options": {
+                "legend": {
+                  "displayMode": "table",
+                  "placement": "bottom",
+                  "calcs": ["lastNotNull", "max"]
+                },
+                "tooltip": {
+                  "mode": "multi"
+                }
+              }
+            }
+          }
+        }
+      },
+      "panel-5": {
+        "kind": "Panel",
+        "spec": {
+          "id": 5,
+          "title": "Stage time per run",
+          "description": "Average seconds per stage of a ci:check run: static checks, unit tests, integration tests.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "avg by (tier) (avg_over_time({job=\"moblord-ci\", stream=\"runs\"} | kind=`ci:check` | json v=\"stages.staticS\" | unwrap v [$__auto]))",
+                        "queryType": "range",
+                        "legendFormat": "static {{tier}}"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "B",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "avg by (tier) (avg_over_time({job=\"moblord-ci\", stream=\"runs\"} | kind=`ci:check` | json v=\"stages.unitS\" | unwrap v [$__auto]))",
+                        "queryType": "range",
+                        "legendFormat": "unit {{tier}}"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "C",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "avg by (tier) (avg_over_time({job=\"moblord-ci\", stream=\"runs\"} | kind=`ci:check` | json v=\"stages.integrationS\" | unwrap v [$__auto]))",
+                        "queryType": "range",
+                        "legendFormat": "integration {{tier}}"
+                      }
+                    }
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "13.2.4",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "noValue": "No data",
+                  "unit": "s",
+                  "custom": {
+                    "drawStyle": "line",
+                    "fillOpacity": 10,
+                    "lineWidth": 2,
+                    "showPoints": "never",
+                    "spanNulls": true
+                  }
+                },
+                "overrides": []
+              },
+              "options": {
+                "legend": {
+                  "displayMode": "table",
+                  "placement": "bottom",
+                  "calcs": ["lastNotNull", "max"]
+                },
+                "tooltip": {
+                  "mode": "multi"
+                }
+              }
+            }
+          }
+        }
+      },
+      "panel-6": {
+        "kind": "Panel",
+        "spec": {
+          "id": 6,
+          "title": "Load per core and CPU pressure",
+          "description": "node_exporter: 1-minute load divided by cores (1.0 = saturated) and the share of time tasks waited for a CPU. nino-pc is nino-pc; ninodev is dev-box-vm.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "datasource": {
+                        "name": "prometheus"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "node_load1{instance=~\"nino-pc|dev-box-vm\"} / on (instance) count by (instance) (node_cpu_seconds_total{mode=\"idle\", instance=~\"nino-pc|dev-box-vm\"})",
+                        "queryType": "range",
+                        "legendFormat": "load/core {{instance}}"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "B",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "datasource": {
+                        "name": "prometheus"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "rate(node_pressure_cpu_waiting_seconds_total{instance=~\"nino-pc|dev-box-vm\"}[$__rate_interval])",
+                        "queryType": "range",
+                        "legendFormat": "cpu pressure {{instance}}"
+                      }
+                    }
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "13.2.4",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "noValue": "No data",
+                  "unit": "percentunit",
+                  "custom": {
+                    "drawStyle": "line",
+                    "fillOpacity": 10,
+                    "lineWidth": 2,
+                    "showPoints": "never",
+                    "spanNulls": true
+                  },
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": null
+                      },
+                      {
+                        "color": "red",
+                        "value": 1
+                      }
+                    ]
+                  }
+                },
+                "overrides": []
+              },
+              "options": {
+                "legend": {
+                  "displayMode": "table",
+                  "placement": "bottom",
+                  "calcs": ["lastNotNull", "max"]
+                },
+                "tooltip": {
+                  "mode": "multi"
+                }
+              }
+            }
+          }
+        }
+      },
+      "panel-7": {
+        "kind": "Panel",
+        "spec": {
+          "id": 7,
+          "title": "Hottest sensor",
+          "description": "node_hwmon_temp_celsius, the maximum over every sensor of the host. nino-pc reached 92 \u00b0C under load on 2026-11-10.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "datasource": {
+                        "name": "prometheus"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "max by (instance) (node_hwmon_temp_celsius{instance=~\"nino-pc|dev-box-vm\"})",
+                        "queryType": "range",
+                        "legendFormat": "{{instance}}"
+                      }
+                    }
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "13.2.4",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "noValue": "No data",
+                  "unit": "celsius",
+                  "custom": {
+                    "drawStyle": "line",
+                    "fillOpacity": 10,
+                    "lineWidth": 2,
+                    "showPoints": "never",
+                    "spanNulls": true
+                  },
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": null
+                      },
+                      {
+                        "color": "orange",
+                        "value": 85
+                      },
+                      {
+                        "color": "red",
+                        "value": 90
+                      }
+                    ]
+                  }
+                },
+                "overrides": []
+              },
+              "options": {
+                "legend": {
+                  "displayMode": "table",
+                  "placement": "bottom",
+                  "calcs": ["lastNotNull", "max"]
+                },
+                "tooltip": {
+                  "mode": "multi"
+                }
+              }
+            }
+          }
+        }
+      },
+      "panel-8": {
+        "kind": "Panel",
+        "spec": {
+          "id": 8,
+          "title": "CPU by command (cores)",
+          "description": "Cores used per kind of process group, from the minute snapshots (ops/telemetry/host-snapshot.py): ci:check, check:fast, a vitest run outside both, browsers, the game server, blender, the agents themselves, other tools agents started, and everything else. Both hosts added up; see the next panel for who.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "sum(avg_over_time({job=\"moblord-ci\", stream=\"load\"} | json v=\"cpu.ci\" | unwrap v [$__auto])) / 100",
+                        "queryType": "range",
+                        "legendFormat": "ci:check"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "B",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "sum(avg_over_time({job=\"moblord-ci\", stream=\"load\"} | json v=\"cpu.checkFast\" | unwrap v [$__auto])) / 100",
+                        "queryType": "range",
+                        "legendFormat": "check:fast"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "C",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "sum(avg_over_time({job=\"moblord-ci\", stream=\"load\"} | json v=\"cpu.vitest\" | unwrap v [$__auto])) / 100",
+                        "queryType": "range",
+                        "legendFormat": "bare vitest"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "D",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "sum(avg_over_time({job=\"moblord-ci\", stream=\"load\"} | json v=\"cpu.browser\" | unwrap v [$__auto])) / 100",
+                        "queryType": "range",
+                        "legendFormat": "browser"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "E",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "sum(avg_over_time({job=\"moblord-ci\", stream=\"load\"} | json v=\"cpu.game\" | unwrap v [$__auto])) / 100",
+                        "queryType": "range",
+                        "legendFormat": "game server"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "F",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "sum(avg_over_time({job=\"moblord-ci\", stream=\"load\"} | json v=\"cpu.blender\" | unwrap v [$__auto])) / 100",
+                        "queryType": "range",
+                        "legendFormat": "blender"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "G",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "sum(avg_over_time({job=\"moblord-ci\", stream=\"load\"} | json v=\"cpu.agent\" | unwrap v [$__auto])) / 100",
+                        "queryType": "range",
+                        "legendFormat": "agents"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "H",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "sum(avg_over_time({job=\"moblord-ci\", stream=\"load\"} | json v=\"cpu.agentTools\" | unwrap v [$__auto])) / 100",
+                        "queryType": "range",
+                        "legendFormat": "agent tools"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "I",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "sum(avg_over_time({job=\"moblord-ci\", stream=\"load\"} | json v=\"cpu.other\" | unwrap v [$__auto])) / 100",
+                        "queryType": "range",
+                        "legendFormat": "other"
+                      }
+                    }
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "13.2.4",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "noValue": "No data",
+                  "unit": "short",
+                  "custom": {
+                    "drawStyle": "line",
+                    "fillOpacity": 40,
+                    "lineWidth": 1,
+                    "showPoints": "never",
+                    "stacking": {
+                      "mode": "normal",
+                      "group": "A"
+                    }
+                  }
+                },
+                "overrides": []
+              },
+              "options": {
+                "legend": {
+                  "displayMode": "table",
+                  "placement": "bottom",
+                  "calcs": ["lastNotNull", "max"]
+                },
+                "tooltip": {
+                  "mode": "multi"
+                }
+              }
+            }
+          }
+        }
+      },
+      "panel-9": {
+        "kind": "Panel",
+        "spec": {
+          "id": 9,
+          "title": "Top CPU owner while SATURATED",
+          "description": "Minutes in the selected range in which this command, checkout and agent thread was the busiest process group on a host whose verdict was SATURATED (load at least its core count, or CPU pressure 20 % or more).",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "sum by (host, top_kind, top_worktree, top_thread) (count_over_time({job=\"moblord-ci\", stream=\"load\"} | verdict=`SATURATED` | json top_kind=\"top.kind\", top_worktree=\"top.worktree\", top_thread=\"top.thread\" [$__range]))",
+                        "queryType": "instant"
+                      }
+                    }
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": [
+                {
+                  "kind": "reduce",
+                  "spec": {
+                    "id": "reduce",
+                    "options": {
+                      "reducers": ["lastNotNull"]
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "table",
+            "version": "13.2.4",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "noValue": "No data",
+                  "unit": "short"
+                },
+                "overrides": []
+              },
+              "options": {}
+            }
+          }
+        }
+      },
+      "panel-10": {
+        "kind": "Panel",
+        "spec": {
+          "id": 10,
+          "title": "CI slots, queue and stray vitest",
+          "description": "Per host: CI slots held, ci:check runs waiting for a slot, vitest runs outside the CI queue, and agent processes.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "max by (host) (max_over_time({job=\"moblord-ci\", stream=\"load\"} | json v=\"slotsHeld\" | unwrap v [$__auto]))",
+                        "queryType": "range",
+                        "legendFormat": "slots held {{host}}"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "B",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "max by (host) (max_over_time({job=\"moblord-ci\", stream=\"load\"} | json v=\"queued\" | unwrap v [$__auto]))",
+                        "queryType": "range",
+                        "legendFormat": "queued {{host}}"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "C",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "max by (host) (max_over_time({job=\"moblord-ci\", stream=\"load\"} | json v=\"vitestBare\" | unwrap v [$__auto]))",
+                        "queryType": "range",
+                        "legendFormat": "bare vitest {{host}}"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "D",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "max by (host) (max_over_time({job=\"moblord-ci\", stream=\"load\"} | json v=\"agents\" | unwrap v [$__auto]))",
+                        "queryType": "range",
+                        "legendFormat": "agents {{host}}"
+                      }
+                    }
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "13.2.4",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "noValue": "No data",
+                  "unit": "short",
+                  "custom": {
+                    "drawStyle": "line",
+                    "fillOpacity": 10,
+                    "lineWidth": 2,
+                    "showPoints": "never",
+                    "spanNulls": true
+                  }
+                },
+                "overrides": []
+              },
+              "options": {
+                "legend": {
+                  "displayMode": "table",
+                  "placement": "bottom",
+                  "calcs": ["lastNotNull", "max"]
+                },
+                "tooltip": {
+                  "mode": "multi"
+                }
+              }
+            }
+          }
+        }
+      },
+      "panel-11": {
+        "kind": "Panel",
+        "spec": {
+          "id": 11,
+          "title": "Saturated minutes",
+          "description": "The snapshots whose verdict was SATURATED, newest first: host, load, the busiest command and its owner.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "{job=\"moblord-ci\", stream=\"load\"} | verdict=`SATURATED` | json load1=\"load1\", tempC=\"tempC\", top_kind=\"top.kind\", top_cpu=\"top.cpuPct\", top_worktree=\"top.worktree\", top_thread=\"top.thread\" | line_format \"{{.host}} load {{.load1}} {{.tempC}}\u00b0C  top: {{.top_kind}} {{.top_cpu}}% of a core  {{.top_worktree}}  {{.top_thread}}\"",
+                        "queryType": "range"
+                      }
+                    }
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "logs",
+            "version": "13.2.4",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "noValue": "No data",
+                  "unit": "short"
+                },
+                "overrides": []
+              },
+              "options": {
+                "showTime": true,
+                "sortOrder": "Descending",
+                "wrapLogMessage": true,
+                "enableLogDetails": true,
+                "dedupStrategy": "none"
+              }
+            }
+          }
+        }
+      },
+      "panel-12": {
+        "kind": "Panel",
+        "spec": {
+          "id": 12,
+          "title": "Starts left (day, hour)",
+          "description": "From `boat limits`, sampled every five minutes by the host snapshot. Agents stop routing to boat below 15 starts left today or 5 this hour.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "min(min_over_time({job=\"moblord-ci\", stream=\"load\"} | json v=\"boat.startsLeftDay\" | unwrap v [$__auto]))",
+                        "queryType": "range",
+                        "legendFormat": "left today (of 200)"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "B",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "min(min_over_time({job=\"moblord-ci\", stream=\"load\"} | json v=\"boat.startsLeftHour\" | unwrap v [$__auto]))",
+                        "queryType": "range",
+                        "legendFormat": "left this hour (of 60)"
+                      }
+                    }
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "13.2.4",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "noValue": "No data",
+                  "unit": "short",
+                  "custom": {
+                    "drawStyle": "line",
+                    "fillOpacity": 10,
+                    "lineWidth": 2,
+                    "showPoints": "never",
+                    "spanNulls": true
+                  },
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "red",
+                        "value": null
+                      },
+                      {
+                        "color": "green",
+                        "value": 15
+                      }
+                    ]
+                  }
+                },
+                "overrides": []
+              },
+              "options": {
+                "legend": {
+                  "displayMode": "table",
+                  "placement": "bottom",
+                  "calcs": ["lastNotNull", "max"]
+                },
+                "tooltip": {
+                  "mode": "multi"
+                }
+              }
+            }
+          }
+        }
+      },
+      "panel-13": {
+        "kind": "Panel",
+        "spec": {
+          "id": 13,
+          "title": "VMs up, idle and VM-hours left",
+          "description": "From `boat list` and `boat limits`: VMs up, VMs idle (a warm VM waiting for its next run), and the plan's VM-hours left this month (555 a month).",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "max(max_over_time({job=\"moblord-ci\", stream=\"load\"} | json v=\"boat.vmsUp\" | unwrap v [$__auto]))",
+                        "queryType": "range",
+                        "legendFormat": "VMs up"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "B",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "max(max_over_time({job=\"moblord-ci\", stream=\"load\"} | json v=\"boat.vmsIdle\" | unwrap v [$__auto]))",
+                        "queryType": "range",
+                        "legendFormat": "VMs idle"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "C",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "min(min_over_time({job=\"moblord-ci\", stream=\"load\"} | json v=\"boat.vmHoursLeft\" | unwrap v [$__auto]))",
+                        "queryType": "range",
+                        "legendFormat": "VM-hours left"
+                      }
+                    }
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "13.2.4",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "noValue": "No data",
+                  "unit": "short",
+                  "custom": {
+                    "drawStyle": "line",
+                    "fillOpacity": 10,
+                    "lineWidth": 2,
+                    "showPoints": "never",
+                    "spanNulls": true
+                  }
+                },
+                "overrides": []
+              },
+              "options": {
+                "legend": {
+                  "displayMode": "table",
+                  "placement": "bottom",
+                  "calcs": ["lastNotNull", "max"]
+                },
+                "tooltip": {
+                  "mode": "multi"
+                }
+              }
+            }
+          }
+        }
+      },
+      "panel-14": {
+        "kind": "Panel",
+        "spec": {
+          "id": 14,
+          "title": "Warm reuse rate",
+          "description": "Share of boat-ci runs in the selected range that reused a warm VM (no start spent).",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "sum(count_over_time({job=\"moblord-ci\", stream=\"runs\"} | kind=`boat-ci` | host_kind=`boat-warm` [$__range])) / sum(count_over_time({job=\"moblord-ci\", stream=\"runs\"} | kind=`boat-ci` [$__range]))",
+                        "queryType": "instant"
+                      }
+                    }
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "stat",
+            "version": "13.2.4",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "noValue": "No data",
+                  "unit": "percentunit"
+                },
+                "overrides": []
+              },
+              "options": {}
+            }
+          }
+        }
+      },
+      "panel-15": {
+        "kind": "Panel",
+        "spec": {
+          "id": 15,
+          "title": "boat-ci runs by tier, VM type and reuse",
+          "description": "boat-ci runs over the selected range: tier, warm (reused) or fresh, and exit code.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "sum by (tier, host_kind, host, exit) (count_over_time({job=\"moblord-ci\", stream=\"runs\"} | kind=`boat-ci` [$__range]))",
+                        "queryType": "instant"
+                      }
+                    }
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": [
+                {
+                  "kind": "reduce",
+                  "spec": {
+                    "id": "reduce",
+                    "options": {
+                      "reducers": ["lastNotNull"]
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "table",
+            "version": "13.2.4",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "noValue": "No data",
+                  "unit": "short"
+                },
+                "overrides": []
+              },
+              "options": {}
+            }
+          }
+        }
+      },
+      "panel-16": {
+        "kind": "Panel",
+        "spec": {
+          "id": 16,
+          "title": "Starts used and VM-seconds by boat-ci",
+          "description": "Per interval, from the ledger's boat-ci lines: VM starts spent and VM wall seconds (a large VM bills 2\u00d7).",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "sum(sum_over_time({job=\"moblord-ci\", stream=\"runs\"} | kind=`boat-ci` | json v=\"startsUsed\" | unwrap v [$__auto]))",
+                        "queryType": "range",
+                        "legendFormat": "starts used"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "B",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "sum(sum_over_time({job=\"moblord-ci\", stream=\"runs\"} | kind=`boat-ci` | json v=\"vmSeconds\" | unwrap v [$__auto])) / 60",
+                        "queryType": "range",
+                        "legendFormat": "VM-minutes"
+                      }
+                    }
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "13.2.4",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "noValue": "No data",
+                  "unit": "short",
+                  "custom": {
+                    "drawStyle": "bars",
+                    "fillOpacity": 70,
+                    "lineWidth": 1,
+                    "stacking": {
+                      "mode": "normal",
+                      "group": "A"
+                    }
+                  }
+                },
+                "overrides": []
+              },
+              "options": {
+                "legend": {
+                  "displayMode": "table",
+                  "placement": "bottom",
+                  "calcs": ["lastNotNull", "max"]
+                },
+                "tooltip": {
+                  "mode": "multi"
+                }
+              }
+            }
+          }
+        }
+      },
+      "panel-17": {
+        "kind": "Panel",
+        "spec": {
+          "id": 17,
+          "title": "Cost per run and in total",
+          "description": "Dollars from the ledger's boat-ci lines: the average per run and the sum over the selected range. Idle time of warm VMs is not in a run's cost.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "avg(avg_over_time({job=\"moblord-ci\", stream=\"runs\"} | kind=`boat-ci` | json v=\"costUsd\" | unwrap v [$__range]))",
+                        "queryType": "instant",
+                        "legendFormat": "per run"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "B",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "sum(sum_over_time({job=\"moblord-ci\", stream=\"runs\"} | kind=`boat-ci` | json v=\"costUsd\" | unwrap v [$__range]))",
+                        "queryType": "instant",
+                        "legendFormat": "total"
+                      }
+                    }
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "stat",
+            "version": "13.2.4",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "noValue": "No data",
+                  "unit": "currencyUSD"
+                },
+                "overrides": []
+              },
+              "options": {}
+            }
+          }
+        }
+      },
+      "panel-18": {
+        "kind": "Panel",
+        "spec": {
+          "id": 18,
+          "title": "Local ci:check on ninodev (fallbacks)",
+          "description": "Every ci:check tier on ninodev is meant to run on boat (ZDX-710). A local one there is a fallback: boat under its thresholds, or the rule ignored. Compare with the starts-left panel.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "sum by (tier) (count_over_time({job=\"moblord-ci\", stream=\"runs\", host=\"ninodev\"} | kind=`ci:check` | host_kind=`local` [$__auto]))",
+                        "queryType": "range",
+                        "legendFormat": "{{tier}}"
+                      }
+                    }
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "13.2.4",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "noValue": "No data",
+                  "unit": "short",
+                  "custom": {
+                    "drawStyle": "bars",
+                    "fillOpacity": 70,
+                    "lineWidth": 1,
+                    "stacking": {
+                      "mode": "normal",
+                      "group": "A"
+                    }
+                  }
+                },
+                "overrides": []
+              },
+              "options": {
+                "legend": {
+                  "displayMode": "table",
+                  "placement": "bottom",
+                  "calcs": ["lastNotNull", "max"]
+                },
+                "tooltip": {
+                  "mode": "multi"
+                }
+              }
+            }
+          }
+        }
+      },
+      "panel-19": {
+        "kind": "Panel",
+        "spec": {
+          "id": 19,
+          "title": "Failures: timeout or assertion",
+          "description": "Test files that did not pass, per interval. A timeout (every failed test of the file timed out) is a load flake until shown otherwise; a fail caught something.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "sum by (result) (count_over_time({job=\"moblord-ci\", stream=\"tests\"} | result=~`fail|timeout` [$__auto]))",
+                        "queryType": "range",
+                        "legendFormat": "{{result}}"
+                      }
+                    }
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "13.2.4",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "noValue": "No data",
+                  "unit": "short",
+                  "custom": {
+                    "drawStyle": "bars",
+                    "fillOpacity": 70,
+                    "lineWidth": 1,
+                    "stacking": {
+                      "mode": "normal",
+                      "group": "A"
+                    }
+                  }
+                },
+                "overrides": []
+              },
+              "options": {
+                "legend": {
+                  "displayMode": "table",
+                  "placement": "bottom",
+                  "calcs": ["lastNotNull", "max"]
+                },
+                "tooltip": {
+                  "mode": "multi"
+                }
+              }
+            }
+          }
+        }
+      },
+      "panel-20": {
+        "kind": "Panel",
+        "spec": {
+          "id": 20,
+          "title": "Flaky and failing files",
+          "description": "Files that failed or timed out in the selected range, by result. The same file under both results is the interesting kind of flaky.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "topk(30, sum by (file, result) (count_over_time({job=\"moblord-ci\", stream=\"tests\"} | result=~`fail|timeout` [$__range])))",
+                        "queryType": "instant"
+                      }
+                    }
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": [
+                {
+                  "kind": "reduce",
+                  "spec": {
+                    "id": "reduce",
+                    "options": {
+                      "reducers": ["lastNotNull"]
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "table",
+            "version": "13.2.4",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "noValue": "No data",
+                  "unit": "short"
+                },
+                "overrides": []
+              },
+              "options": {}
+            }
+          }
+        }
+      },
+      "panel-21": {
+        "kind": "Panel",
+        "spec": {
+          "id": 21,
+          "title": "Slowest files (mean seconds)",
+          "description": "Mean duration of the slowest passing files over the selected range. Only files of 3 s or more are shipped (ops/telemetry/ship.py).",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "topk(25, avg by (file) (avg_over_time({job=\"moblord-ci\", stream=\"tests\"} | result=`pass` | json v=\"ms\" | unwrap v [$__range]))) / 1000",
+                        "queryType": "instant"
+                      }
+                    }
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": [
+                {
+                  "kind": "reduce",
+                  "spec": {
+                    "id": "reduce",
+                    "options": {
+                      "reducers": ["lastNotNull"]
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "table",
+            "version": "13.2.4",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "noValue": "No data",
+                  "unit": "s"
+                },
+                "overrides": []
+              },
+              "options": {}
+            }
+          }
+        }
+      },
+      "panel-22": {
+        "kind": "Panel",
+        "spec": {
+          "id": 22,
+          "title": "Slow files over time",
+          "description": "The ten slowest passing files per interval: a line that climbs is a file getting slower.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "topk(10, avg by (file) (avg_over_time({job=\"moblord-ci\", stream=\"tests\"} | result=`pass` | json v=\"ms\" | unwrap v [$__auto]))) / 1000",
+                        "queryType": "range",
+                        "legendFormat": "{{file}}"
+                      }
+                    }
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "13.2.4",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "noValue": "No data",
+                  "unit": "s",
+                  "custom": {
+                    "drawStyle": "line",
+                    "fillOpacity": 10,
+                    "lineWidth": 2,
+                    "showPoints": "never",
+                    "spanNulls": true
+                  }
+                },
+                "overrides": []
+              },
+              "options": {
+                "legend": {
+                  "displayMode": "list",
+                  "placement": "bottom"
+                },
+                "tooltip": {
+                  "mode": "multi"
+                }
+              }
+            }
+          }
+        }
+      },
+      "panel-23": {
+        "kind": "Panel",
+        "spec": {
+          "id": 23,
+          "title": "Cold files skipped per thorough run",
+          "description": "plan.coldSkipped of ci:check --thorough runs: the size of the cold set as the runs saw it. A step is cold-set churn; `pnpm compute:report` names the files.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "max by (host) (max_over_time({job=\"moblord-ci\", stream=\"runs\"} | kind=`ci:check` | tier=`thorough` | json v=\"plan.coldSkipped\" | unwrap v [$__auto]))",
+                        "queryType": "range",
+                        "legendFormat": "{{host}}"
+                      }
+                    }
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "13.2.4",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "noValue": "No data",
+                  "unit": "short",
+                  "custom": {
+                    "drawStyle": "line",
+                    "fillOpacity": 10,
+                    "lineWidth": 2,
+                    "showPoints": "never",
+                    "spanNulls": true
+                  }
+                },
+                "overrides": []
+              },
+              "options": {
+                "legend": {
+                  "displayMode": "table",
+                  "placement": "bottom",
+                  "calcs": ["lastNotNull", "max"]
+                },
+                "tooltip": {
+                  "mode": "multi"
+                }
+              }
+            }
+          }
+        }
+      },
+      "panel-24": {
+        "kind": "Panel",
+        "spec": {
+          "id": 24,
+          "title": "Gate runs per thread",
+          "description": "ci:check runs per agent thread over the selected range, with model and exit code. Several failed runs before a pass is a fix-and-rerun loop; `pnpm compute:report` counts them and their gaps.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "sum by (thread, model, ticket, exit) (count_over_time({job=\"moblord-ci\", stream=\"runs\"} | kind=`ci:check` | thread!=`` [$__range]))",
+                        "queryType": "instant"
+                      }
+                    }
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": [
+                {
+                  "kind": "reduce",
+                  "spec": {
+                    "id": "reduce",
+                    "options": {
+                      "reducers": ["lastNotNull"]
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "table",
+            "version": "13.2.4",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "noValue": "No data",
+                  "unit": "short"
+                },
+                "overrides": []
+              },
+              "options": {}
+            }
+          }
+        }
+      },
+      "panel-25": {
+        "kind": "Panel",
+        "spec": {
+          "id": 25,
+          "title": "Gate pass rate by model",
+          "description": "Share of ci:check runs with an agent thread that passed, by the model that ran them (from the session's transcript, the model field only).",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "sum by (model) (count_over_time({job=\"moblord-ci\", stream=\"runs\"} | kind=`ci:check` | thread!=`` | exit=`0` [$__range])) / sum by (model) (count_over_time({job=\"moblord-ci\", stream=\"runs\"} | kind=`ci:check` | thread!=`` [$__range]))",
+                        "queryType": "instant"
+                      }
+                    }
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": [
+                {
+                  "kind": "reduce",
+                  "spec": {
+                    "id": "reduce",
+                    "options": {
+                      "reducers": ["lastNotNull"]
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "table",
+            "version": "13.2.4",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "noValue": "No data",
+                  "unit": "percentunit"
+                },
+                "overrides": []
+              },
+              "options": {}
+            }
+          }
+        }
+      },
+      "panel-26": {
+        "kind": "Panel",
+        "spec": {
+          "id": 26,
+          "title": "T3 runs by model family and outcome",
+          "description": "T3 Code's own metric t3_runs_total (finished agent runs), by host, model family, outcome and whether the run was delegated. host_name comes from target_info: the instance label changes with every T3 restart.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "datasource": {
+                        "name": "prometheus"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "sum by (host_name, modelFamily, outcome, delegated) (increase(t3_runs_total[$__rate_interval]) * on (instance) group_left (host_name) target_info{job=\"t3code/t3code-server\"})",
+                        "queryType": "range",
+                        "legendFormat": "{{host_name}} {{modelFamily}} {{outcome}} delegated={{delegated}}"
+                      }
+                    }
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "13.2.4",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "noValue": "No data",
+                  "unit": "short",
+                  "custom": {
+                    "drawStyle": "bars",
+                    "fillOpacity": 70,
+                    "lineWidth": 1,
+                    "stacking": {
+                      "mode": "normal",
+                      "group": "A"
+                    }
+                  }
+                },
+                "overrides": []
+              },
+              "options": {
+                "legend": {
+                  "displayMode": "table",
+                  "placement": "bottom",
+                  "calcs": ["lastNotNull", "max"]
+                },
+                "tooltip": {
+                  "mode": "multi"
+                }
+              }
+            }
+          }
+        }
+      },
+      "panel-27": {
+        "kind": "Panel",
+        "spec": {
+          "id": 27,
+          "title": "T3 run duration (p50, p95)",
+          "description": "t3_run_duration_milliseconds by model family: how long an agent run takes.",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "datasource": {
+                        "name": "prometheus"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "histogram_quantile(0.5, sum by (le, modelFamily) (rate(t3_run_duration_milliseconds_bucket[$__rate_interval]))) / 1000",
+                        "queryType": "range",
+                        "legendFormat": "p50 {{modelFamily}}"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "B",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "datasource": {
+                        "name": "prometheus"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "histogram_quantile(0.95, sum by (le, modelFamily) (rate(t3_run_duration_milliseconds_bucket[$__rate_interval]))) / 1000",
+                        "queryType": "range",
+                        "legendFormat": "p95 {{modelFamily}}"
+                      }
+                    }
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "13.2.4",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "noValue": "No data",
+                  "unit": "s",
+                  "custom": {
+                    "drawStyle": "line",
+                    "fillOpacity": 10,
+                    "lineWidth": 2,
+                    "showPoints": "never",
+                    "spanNulls": true
+                  }
+                },
+                "overrides": []
+              },
+              "options": {
+                "legend": {
+                  "displayMode": "table",
+                  "placement": "bottom",
+                  "calcs": ["lastNotNull", "max"]
+                },
+                "tooltip": {
+                  "mode": "multi"
+                }
+              }
+            }
+          }
+        }
+      },
+      "panel-28": {
+        "kind": "Panel",
+        "spec": {
+          "id": 28,
+          "title": "T3 run queue wait (p95) and process groups",
+          "description": "t3_run_queue_wait_milliseconds p95 by host, and the CPU percent of T3's process groups (server, claude, terminal, other).",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "datasource": {
+                        "name": "prometheus"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "histogram_quantile(0.95, sum by (le, host_name) (rate(t3_run_queue_wait_milliseconds_bucket[$__rate_interval]) * on (instance) group_left (host_name) target_info{job=\"t3code/t3code-server\"})) / 1000",
+                        "queryType": "range",
+                        "legendFormat": "queue wait p95 s {{host_name}}"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "B",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "datasource": {
+                        "name": "prometheus"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "sum by (host_name, group) (t3_process_group_cpu_percent * on (instance) group_left (host_name) target_info{job=\"t3code/t3code-server\"})",
+                        "queryType": "range",
+                        "legendFormat": "cpu % {{host_name}} {{group}}"
+                      }
+                    }
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "13.2.4",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "noValue": "No data",
+                  "unit": "short",
+                  "custom": {
+                    "drawStyle": "line",
+                    "fillOpacity": 10,
+                    "lineWidth": 2,
+                    "showPoints": "never",
+                    "spanNulls": true
+                  }
+                },
+                "overrides": []
+              },
+              "options": {
+                "legend": {
+                  "displayMode": "table",
+                  "placement": "bottom",
+                  "calcs": ["lastNotNull", "max"]
+                },
+                "tooltip": {
+                  "mode": "multi"
+                }
+              }
+            }
+          }
+        }
+      },
+      "panel-29": {
+        "kind": "Panel",
+        "spec": {
+          "id": 29,
+          "title": "Run ledger",
+          "description": "The ledger lines themselves, newest first. Expand one for every field (plan, stages, failing files).",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "refId": "A",
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "datasource": {
+                        "name": "loki"
+                      },
+                      "version": "v0",
+                      "spec": {
+                        "expr": "{job=\"moblord-ci\", stream=\"runs\"} | json wallS=\"wallS\", failedStep=\"failedStep\" | line_format \"{{.host}} {{.kind}} {{.tier}} {{.host_kind}} exit={{.exit}} {{.wallS}}s {{.failedStep}}  {{.model}} {{.ticket}} {{.worktree}}  {{.thread}}\"",
+                        "queryType": "range"
+                      }
+                    }
+                  }
+                }
+              ],
+              "queryOptions": {},
+              "transformations": []
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "logs",
+            "version": "13.2.4",
+            "spec": {
+              "fieldConfig": {
+                "defaults": {
+                  "noValue": "No data",
+                  "unit": "short"
+                },
+                "overrides": []
+              },
+              "options": {
+                "showTime": true,
+                "sortOrder": "Descending",
+                "wrapLogMessage": false,
+                "enableLogDetails": true,
+                "dedupStrategy": "none"
+              }
+            }
+          }
+        }
+      }
+    },
+    "layout": {
+      "kind": "RowsLayout",
+      "spec": {
+        "rows": [
+          {
+            "kind": "RowsLayoutRow",
+            "spec": {
+              "title": "1 \u00b7 Where CI time goes",
+              "collapse": false,
+              "layout": {
+                "kind": "AutoGridLayout",
+                "spec": {
+                  "columnWidthMode": "standard",
+                  "rowHeightMode": "standard",
+                  "maxColumnCount": 3,
+                  "fillScreen": false,
+                  "items": [
+                    {
+                      "kind": "AutoGridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-1"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "AutoGridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-2"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "AutoGridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-3"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "AutoGridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-4"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "AutoGridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-5"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "kind": "RowsLayoutRow",
+            "spec": {
+              "title": "2 \u00b7 Host saturation: who and what",
+              "collapse": false,
+              "layout": {
+                "kind": "AutoGridLayout",
+                "spec": {
+                  "columnWidthMode": "standard",
+                  "rowHeightMode": "standard",
+                  "maxColumnCount": 3,
+                  "fillScreen": false,
+                  "items": [
+                    {
+                      "kind": "AutoGridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-6"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "AutoGridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-7"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "AutoGridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-8"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "AutoGridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-9"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "AutoGridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-10"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "AutoGridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-11"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "kind": "RowsLayoutRow",
+            "spec": {
+              "title": "3 \u00b7 Boat efficiency",
+              "collapse": false,
+              "layout": {
+                "kind": "AutoGridLayout",
+                "spec": {
+                  "columnWidthMode": "standard",
+                  "rowHeightMode": "standard",
+                  "maxColumnCount": 3,
+                  "fillScreen": false,
+                  "items": [
+                    {
+                      "kind": "AutoGridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-12"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "AutoGridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-13"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "AutoGridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-14"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "AutoGridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-15"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "AutoGridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-16"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "AutoGridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-17"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "AutoGridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-18"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "kind": "RowsLayoutRow",
+            "spec": {
+              "title": "4 \u00b7 Test health",
+              "collapse": false,
+              "layout": {
+                "kind": "AutoGridLayout",
+                "spec": {
+                  "columnWidthMode": "standard",
+                  "rowHeightMode": "standard",
+                  "maxColumnCount": 3,
+                  "fillScreen": false,
+                  "items": [
+                    {
+                      "kind": "AutoGridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-19"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "AutoGridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-20"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "AutoGridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-21"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "AutoGridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-22"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "AutoGridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-23"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "kind": "RowsLayoutRow",
+            "spec": {
+              "title": "5 \u00b7 Agent behaviour",
+              "collapse": false,
+              "layout": {
+                "kind": "AutoGridLayout",
+                "spec": {
+                  "columnWidthMode": "standard",
+                  "rowHeightMode": "standard",
+                  "maxColumnCount": 3,
+                  "fillScreen": false,
+                  "items": [
+                    {
+                      "kind": "AutoGridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-24"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "AutoGridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-25"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "AutoGridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-26"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "AutoGridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-27"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "AutoGridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-28"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "AutoGridLayoutItem",
+                      "spec": {
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-29"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}
