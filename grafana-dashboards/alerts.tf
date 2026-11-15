@@ -3,8 +3,10 @@ locals {
   # Proxmox pushes guest metrics to InfluxDB via its native metric server.
   influx_datasource_uid = "eev3nrqve78cgf"
 
-  # Guests that are normally switched off, so a stopped status is expected.
-  proxmox_stopped_guests = ["ark", "mc-server", "Opnsense", "qbit-linux-dev", "win-10-lab"]
+  # Guests that are normally switched off, or decommissioned, so a stopped
+  # status is expected. qbit-linux and internal-nginx were retired.
+  # qbit-linux-dev stays in the normally-off set.
+  proxmox_stopped_guests = ["ark", "mc-server", "Opnsense", "internal-nginx", "qbit-linux", "qbit-linux-dev", "win-10-lab"]
 
   alert_labels = {
     team = "obs"
@@ -48,7 +50,7 @@ resource "grafana_rule_group" "obs_infrastructure" {
       }
       datasource_uid = local.prom_datasource_uid
       model = jsonencode({
-        expr          = "up{job=\"prometheus.scrape.node_exporter\", on_demand!=\"true\"}"
+        expr          = "up{job=\"prometheus.scrape.node_exporter\", on_demand!=\"true\", instance!=\"qbit\", proxmox_guest!=\"qbit-linux\"}"
         refId         = "A"
         editorMode    = "code"
         instant       = true
@@ -603,7 +605,7 @@ resource "grafana_rule_group" "obs_infrastructure" {
 
     annotations = {
       summary       = "Proxmox guest stopped ({{ $labels.host }})"
-      description   = "Guest {{ $labels.host }} ({{ $labels.object }}) is not running on Proxmox. Guests that are normally off (${join(", ", local.proxmox_stopped_guests)}) are excluded."
+      description   = "Guest {{ $labels.host }} ({{ $labels.object }}) is not running on Proxmox. Guests that are normally off or decommissioned (${join(", ", local.proxmox_stopped_guests)}) are excluded."
       dashboard_url = "https://monitoring.palvir.dev/d/obs-guest-reconcile"
     }
 

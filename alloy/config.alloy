@@ -249,11 +249,6 @@ prometheus.scrape "node_exporter" {
       proxmox_guest  = "internal-services",
     },
     {
-      __address__    = "192.168.2.10:9100",
-      instance       = "qbit",
-      proxmox_guest  = "qbit-linux",
-    },
-    {
       __address__    = "192.168.0.65:9100",
       instance       = "proxmox",
     },
@@ -359,17 +354,9 @@ prometheus.exporter.blackbox "health" {
     module  = "http_2xx"
   }
 
-  target {
-    name    = "webhook-broker"
-    address = "http://192.168.2.10:8081/health"
-    module  = "http_2xx"
-  }
-
-  target {
-    name    = "zino-downloader"
-    address = "http://192.168.2.10:8082/healthz"
-    module  = "http_2xx"
-  }
+  // webhook-broker (:8081) and zino-downloader (:8082) were probed on
+  // qbit-linux (192.168.2.10). That guest is decommissioned, so those
+  // probes are gone. Point them at the new host before adding them back.
 }
 
 prometheus.scrape "health_checks" {
