@@ -6,7 +6,8 @@ locals {
   # Guests that are normally switched off, or decommissioned, so a stopped
   # status is expected. qbit-linux and internal-nginx were retired.
   # qbit-linux-dev stays in the normally-off set.
-  proxmox_stopped_guests = ["ark", "mc-server", "Opnsense", "internal-nginx", "qbit-linux", "qbit-linux-dev", "win-10-lab"]
+  # The k3s control plane, workers, and lb are not always-on boxes.
+  proxmox_stopped_guests = ["ark", "mc-server", "Opnsense", "internal-nginx", "qbit-linux", "qbit-linux-dev", "win-10-lab", "k3s-1", "k3s-2", "k3s-3", "k3s-wrk-1", "k3s-wrk-2", "lb"]
 
   alert_labels = {
     team = "obs"
